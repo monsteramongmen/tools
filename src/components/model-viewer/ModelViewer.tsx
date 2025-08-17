@@ -6,11 +6,25 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { RotateCcw, ZoomIn, ZoomOut, RefreshCw, Loader2, AlertTriangle, UploadCloud } from 'lucide-react';
 
+// Required for declaration merging, but we will import the component dynamically.
 declare global {
   namespace JSX {
     interface IntrinsicElements {
       'model-viewer': React.DetailedHTMLProps<
-        React.AllHTMLAttributes<ModelViewerElement>,
+        React.AllHTMLAttributes<ModelViewerElement> & {
+          src?: string;
+          alt?: string;
+          ar?: boolean;
+          'ar-modes'?: string;
+          'camera-controls'?: boolean;
+          'enable-pan'?: boolean;
+          'shadow-intensity'?: string;
+          autoplay?: boolean;
+          style?: React.CSSProperties;
+          'camera-orbit'?: string;
+          'camera-target'?: string;
+          'field-of-view'?: string;
+        },
         ModelViewerElement
       >;
     }
@@ -94,21 +108,29 @@ export function ModelViewerComponent() {
       const [theta, phi, radiusStr] = currentOrbit.split(' ');
       
       const isPercentage = radiusStr.includes('%');
-      const radius = parseFloat(radiusStr);
-      const unit = isPercentage ? '%' : 'm';
+      let radius = parseFloat(radiusStr);
+      let unit = isPercentage ? '%' : 'm';
       
-      const newRadius = Math.max(0.1, radius * factor);
+      let newRadius = radius * factor;
+
+      if (isPercentage) {
+        newRadius = Math.max(10, newRadius); 
+      } else {
+        newRadius = Math.max(0.1, newRadius); 
+      }
+      
       viewer.cameraOrbit = `${theta} ${phi} ${newRadius}${unit}`;
     }
   };
 
+
   const rotate = (deg: number) => {
     const viewer = modelViewerRef.current;
     if (viewer) {
-      const currentOrbit = viewer.getAttribute('camera-orbit');
-      if (!currentOrbit) return;
-      const [theta, phi, radius] = currentOrbit.split(' ');
-      viewer.cameraOrbit = `${parseFloat(theta) + deg}deg ${phi} ${radius}`;
+        const currentOrbit = viewer.getAttribute('camera-orbit');
+        if (!currentOrbit) return;
+        const [theta, phi, radius] = currentOrbit.split(' ');
+        viewer.cameraOrbit = `${parseFloat(theta) + deg}deg ${phi} ${radius}`;
     }
   };
   
@@ -142,8 +164,8 @@ export function ModelViewerComponent() {
                 <hr className="flex-grow border-border" />
             </div>
 
-            <Button variant="outline" onClick={triggerFileInput} className="w-full">
-                <UploadCloud className="mr-2" />
+            <Button variant="outline" onClick={triggerFileInput} className="w-full sm:hidden">
+                <UploadCloud className="mr-2 h-4 w-4" />
                 Upload File
             </Button>
             <input
@@ -186,16 +208,16 @@ export function ModelViewerComponent() {
 
         <div className="grid grid-cols-2 md:flex md:flex-wrap gap-4 justify-center mt-6">
             <Button variant="outline" size="sm" onClick={() => rotate(-15)}>
-                <RotateCcw className="mr-2" /> Rotate
+                <RotateCcw className="mr-2 h-4 w-4" /> Rotate
             </Button>
             <Button variant="outline" size="sm" onClick={() => zoom(0.8)}>
-                <ZoomIn className="mr-2" /> Zoom In
+                <ZoomIn className="mr-2 h-4 w-4" /> Zoom In
             </Button>
             <Button variant="outline" size="sm" onClick={() => zoom(1.25)}>
-                <ZoomOut className="mr-2" /> Zoom Out
+                <ZoomOut className="mr-2 h-4 w-4" /> Zoom Out
             </Button>
             <Button variant="outline" size="sm" onClick={resetCamera}>
-                <RefreshCw className="mr-2" /> Reset View
+                <RefreshCw className="mr-2 h-4 w-4" /> Reset View
             </Button>
         </div>
 
