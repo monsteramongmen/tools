@@ -95,7 +95,7 @@ export function ModelViewerComponent() {
       const [theta, phi, radiusStr] = viewer.cameraOrbit.split(' ');
       const radius = parseFloat(radiusStr);
       const unit = radiusStr.replace(String(radius), '');
-      const newRadius = radius * factor;
+      const newRadius = Math.max(0.1, radius * factor);
       viewer.cameraOrbit = `${theta} ${phi} ${newRadius}${unit}`;
     }
   };
