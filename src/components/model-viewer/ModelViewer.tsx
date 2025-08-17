@@ -47,6 +47,11 @@ export function ModelViewerComponent() {
 
   const handleLoad = useCallback(() => {
     setIsLoading(false);
+    // Initialize camera orbit after model loads
+    const viewer = modelViewerRef.current;
+    if (viewer && !viewer.cameraOrbit) {
+      viewer.cameraOrbit = '0deg 75deg 105%';
+    }
   }, []);
 
   const handleError = useCallback((event: any) => {
@@ -99,128 +104,158 @@ export function ModelViewerComponent() {
     fileInputRef.current?.click();
   };
 
+  // Fixed zoom function
   const zoom = (factor: number) => {
     const viewer = modelViewerRef.current;
-    if (viewer) {
-      const currentOrbit = viewer.getAttribute('camera-orbit');
-      if (!currentOrbit) return;
+    if (!viewer) return;
 
-      const [theta, phi, radiusStr] = currentOrbit.split(' ');
+    try {
+      // Get current camera orbit, fallback to default if not set
+      const currentOrbit = viewer.cameraOrbit || '0deg 75deg 105%';
+      const orbitParts = currentOrbit.split(' ');
       
+      if (orbitParts.length !== 3) return;
+
+      const [theta, phi, radiusStr] = orbitParts;
+      
+      // Parse radius and determine if it's percentage or unit-based
       const isPercentage = radiusStr.includes('%');
-      let radius = parseFloat(radiusStr);
-      let unit = isPercentage ? '%' : 'm';
+      const radiusValue = parseFloat(radiusStr.replace(/[^\d.-]/g, ''));
       
-      let newRadius = radius * factor;
-
+      if (isNaN(radiusValue)) return;
+      
+      let newRadius = radiusValue * factor;
+      const unit = isPercentage ? '%' : 'm';
+      
+      // Set reasonable bounds
       if (isPercentage) {
-        newRadius = Math.max(10, newRadius); 
+        newRadius = Math.max(10, Math.min(1000, newRadius));
       } else {
-        newRadius = Math.max(0.1, newRadius); 
+        newRadius = Math.max(0.1, Math.min(100, newRadius));
       }
       
       viewer.cameraOrbit = `${theta} ${phi} ${newRadius}${unit}`;
+    } catch (error) {
+      console.error('Error in zoom function:', error);
     }
   };
 
-
+  // Fixed rotate function
   const rotate = (deg: number) => {
     const viewer = modelViewerRef.current;
-    if (viewer) {
-        const currentOrbit = viewer.getAttribute('camera-orbit');
-        if (!currentOrbit) return;
-        const [theta, phi, radius] = currentOrbit.split(' ');
-        viewer.cameraOrbit = `${parseFloat(theta) + deg}deg ${phi} ${radius}`;
+    if (!viewer) return;
+
+    try {
+      // Get current camera orbit, fallback to default if not set
+      const currentOrbit = viewer.cameraOrbit || '0deg 75deg 105%';
+      const orbitParts = currentOrbit.split(' ');
+      
+      if (orbitParts.length !== 3) return;
+
+      const [theta, phi, radius] = orbitParts;
+      
+      // Parse current theta value
+      const currentTheta = parseFloat(theta.replace(/[^\d.-]/g, ''));
+      if (isNaN(currentTheta)) return;
+      
+      const newTheta = currentTheta + deg;
+      viewer.cameraOrbit = `${newTheta}deg ${phi} ${radius}`;
+    } catch (error) {
+      console.error('Error in rotate function:', error);
     }
   };
   
+  // Fixed reset function
   const resetCamera = () => {
     const viewer = modelViewerRef.current;
-    if (viewer) {
-        viewer.cameraOrbit = '0deg 75deg 105%';
-        viewer.cameraTarget = 'auto auto auto';
-        viewer.fieldOfView = 'auto';
+    if (!viewer) return;
+
+    try {
+      viewer.cameraOrbit = '0deg 75deg 105%';
+      viewer.cameraTarget = 'auto auto auto';
+      viewer.fieldOfView = 'auto';
+    } catch (error) {
+      console.error('Error in resetCamera function:', error);
     }
-  }
+  };
 
   return (
     <Card>
       <CardContent className="pt-6">
         <div className="flex flex-col gap-4 mb-6">
-            <div className="flex flex-col sm:flex-row gap-2">
-                <Input
-                    type="text"
-                    value={inputUrl}
-                    onChange={handleUrlChange}
-                    placeholder="Enter .glb or .gltf model URL"
-                    className="flex-grow"
-                />
-                <Button onClick={handleLoadUrl} className="flex-shrink-0">Load from URL</Button>
-            </div>
-            
-            <div className="flex items-center gap-4 sm:hidden">
-                <hr className="flex-grow border-border" />
-                <span className="text-muted-foreground text-sm">OR</span>
-                <hr className="flex-grow border-border" />
-            </div>
-
-            <Button variant="outline" onClick={triggerFileInput} className="w-full sm:hidden">
-                <UploadCloud className="mr-2 h-4 w-4" />
-                Upload File
-            </Button>
-            <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept=".glb,.gltf"
-                className="hidden"
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Input
+              type="text"
+              value={inputUrl}
+              onChange={handleUrlChange}
+              placeholder="Enter .glb or .gltf model URL"
+              className="flex-grow"
             />
+            <Button onClick={handleLoadUrl} className="flex-shrink-0">Load from URL</Button>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <hr className="flex-grow border-border" />
+            <span className="text-muted-foreground text-sm">OR</span>
+            <hr className="flex-grow border-border" />
+          </div>
+
+          <Button variant="outline" onClick={triggerFileInput} className="w-full">
+            <UploadCloud className="mr-2 h-4 w-4" />
+            Upload File
+          </Button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept=".glb,.gltf"
+            className="hidden"
+          />
         </div>
 
         <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center">
-            <model-viewer
-                ref={modelViewerRef}
-                src={modelSrc}
-                alt="A 3D model"
-                ar
-                ar-modes="webxr scene-viewer quick-look"
-                camera-controls
-                enable-pan
-                shadow-intensity="1"
-                autoplay
-                style={{ width: '100%', height: '100%', position: 'absolute' }}
-            >
-            </model-viewer>
-             {isLoading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/80 z-10">
-                    <Loader2 className="w-8 h-8 animate-spin" />
-                    <p className="mt-2 text-muted-foreground">Loading model...</p>
-                </div>
-            )}
-             {error && !isLoading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/80 z-10 text-destructive text-center p-4">
-                    <AlertTriangle className="w-10 h-10 mb-2" />
-                    <p className="font-semibold">Error Loading Model</p>
-                    <p className="text-sm">{error}</p>
-                </div>
-             )}
+          <model-viewer
+            ref={modelViewerRef}
+            src={modelSrc}
+            alt="A 3D model"
+            ar
+            ar-modes="webxr scene-viewer quick-look"
+            camera-controls
+            enable-pan
+            shadow-intensity="1"
+            autoplay
+            camera-orbit="0deg 75deg 105%"
+            style={{ width: '100%', height: '100%', position: 'absolute' }}
+          />
+          {isLoading && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/80 z-10">
+              <Loader2 className="w-8 h-8 animate-spin" />
+              <p className="mt-2 text-muted-foreground">Loading model...</p>
+            </div>
+          )}
+          {error && !isLoading && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/80 z-10 text-destructive text-center p-4">
+              <AlertTriangle className="w-10 h-10 mb-2" />
+              <p className="font-semibold">Error Loading Model</p>
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 md:flex md:flex-wrap gap-4 justify-center mt-6">
-            <Button variant="outline" size="sm" onClick={() => rotate(-15)}>
-                <RotateCcw className="mr-2 h-4 w-4" /> Rotate
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => zoom(0.8)}>
-                <ZoomIn className="mr-2 h-4 w-4" /> Zoom In
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => zoom(1.25)}>
-                <ZoomOut className="mr-2 h-4 w-4" /> Zoom Out
-            </Button>
-            <Button variant="outline" size="sm" onClick={resetCamera}>
-                <RefreshCw className="mr-2 h-4 w-4" /> Reset View
-            </Button>
+          <Button variant="outline" size="sm" onClick={() => rotate(-15)}>
+            <RotateCcw className="mr-2 h-4 w-4" /> Rotate
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => zoom(0.8)}>
+            <ZoomIn className="mr-2 h-4 w-4" /> Zoom In
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => zoom(1.25)}>
+            <ZoomOut className="mr-2 h-4 w-4" /> Zoom Out
+          </Button>
+          <Button variant="outline" size="sm" onClick={resetCamera}>
+            <RefreshCw className="mr-2 h-4 w-4" /> Reset View
+          </Button>
         </div>
-
       </CardContent>
     </Card>
   );
