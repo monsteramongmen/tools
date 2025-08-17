@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, View, Box } from "lucide-react";
+import { Camera, View, Box, QrCode } from "lucide-react";
 
 export default function Home() {
   return (
@@ -48,7 +48,7 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow duration-300 md:col-span-2 lg:col-span-1">
+        <Card className="hover:shadow-lg transition-shadow duration-300">
           <CardHeader className="items-center text-center">
             <div className="p-4 bg-primary/10 rounded-full mb-4">
               <Box className="w-8 h-8 text-primary" />
@@ -61,6 +61,23 @@ export default function Home() {
           <CardContent className="text-center">
             <Button asChild>
               <Link href="/model-viewer">Open Viewer</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow duration-300">
+          <CardHeader className="items-center text-center">
+            <div className="p-4 bg-primary/10 rounded-full mb-4">
+              <QrCode className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">QR Code Generator</CardTitle>
+            <CardDescription>
+              Create and share QR codes for URLs, text, and more. Instantly scannable.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button asChild>
+              <Link href="/qr-generator">Create QR Code</Link>
             </Button>
           </CardContent>
         </Card>

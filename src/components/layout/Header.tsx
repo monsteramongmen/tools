@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Cpu, Menu, ChevronDown, View, Camera, Box } from "lucide-react";
+import { Cpu, Menu, ChevronDown, View, Camera, Box, QrCode } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./ThemeToggle";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -22,6 +22,7 @@ const toolsNavLinks = [
   { href: "/ar-viewer", label: "AR Viewer", icon: View },
   { href: "/capture-share", label: "Capture & Share", icon: Camera },
   { href: "/model-viewer", label: "Model Viewer", icon: Box },
+  { href: "/qr-generator", label: "QR Generator", icon: QrCode },
 ];
 
 function NavLink({ href, label }: { href: string; label: string }) {
