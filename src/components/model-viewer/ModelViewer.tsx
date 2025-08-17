@@ -106,7 +106,12 @@ export function ModelViewerComponent() {
   };
   
   const resetCamera = () => {
-    modelViewerRef.current?.resetCamera();
+    const viewer = modelViewerRef.current;
+    if (viewer) {
+        viewer.cameraOrbit = '0deg 75deg 105%';
+        viewer.cameraTarget = 'auto auto auto';
+        viewer.fieldOfView = 'auto';
+    }
   }
 
   return (
