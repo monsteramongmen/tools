@@ -125,28 +125,35 @@ export function ModelViewerComponent() {
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <Input
-            type="text"
-            value={inputUrl}
-            onChange={handleUrlChange}
-            placeholder="Enter .glb or .gltf model URL"
-            className="flex-grow"
-          />
-          <div className="flex gap-2">
-            <Button onClick={handleLoadUrl}>Load from URL</Button>
-            <Button variant="outline" onClick={triggerFileInput}>
-              <UploadCloud className="mr-2" />
-              Upload File
+        <div className="flex flex-col gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-2">
+                <Input
+                    type="text"
+                    value={inputUrl}
+                    onChange={handleUrlChange}
+                    placeholder="Enter .glb or .gltf model URL"
+                    className="flex-grow"
+                />
+                <Button onClick={handleLoadUrl} className="flex-shrink-0">Load from URL</Button>
+            </div>
+            
+            <div className="flex items-center gap-4 sm:hidden">
+                <hr className="flex-grow border-border" />
+                <span className="text-muted-foreground text-sm">OR</span>
+                <hr className="flex-grow border-border" />
+            </div>
+
+            <Button variant="outline" onClick={triggerFileInput} className="w-full">
+                <UploadCloud className="mr-2" />
+                Upload File
             </Button>
             <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept=".glb,.gltf"
-              className="hidden"
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".glb,.gltf"
+                className="hidden"
             />
-          </div>
         </div>
 
         <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center">
