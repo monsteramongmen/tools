@@ -6,7 +6,7 @@ import Footer from '@/components/layout/Footer';
 import { ThemeProvider } from '@/components/layout/ThemeProvider';
 
 export const metadata: Metadata = {
-  title: 'AR Toolkit',
+  title: 'Toolkit',
   description: 'A modern, mobile-responsive web app for AR experiences and media capture.',
 };
 

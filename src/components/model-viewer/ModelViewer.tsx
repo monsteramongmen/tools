@@ -92,9 +92,15 @@ export function ModelViewerComponent() {
   const zoom = (factor: number) => {
     const viewer = modelViewerRef.current;
     if (viewer) {
-      const [theta, phi, radiusStr] = viewer.cameraOrbit.split(' ');
+      const currentOrbit = viewer.getAttribute('camera-orbit');
+      if (!currentOrbit) return;
+
+      const [theta, phi, radiusStr] = currentOrbit.split(' ');
+      
+      const isPercentage = radiusStr.includes('%');
       const radius = parseFloat(radiusStr);
-      const unit = radiusStr.replace(String(radius), '');
+      const unit = isPercentage ? '%' : 'm';
+      
       const newRadius = Math.max(0.1, radius * factor);
       viewer.cameraOrbit = `${theta} ${phi} ${newRadius}${unit}`;
     }
@@ -119,28 +125,35 @@ export function ModelViewerComponent() {
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <Input
-            type="text"
-            value={inputUrl}
-            onChange={handleUrlChange}
-            placeholder="Enter .glb or .gltf model URL"
-            className="flex-grow"
-          />
-          <div className="flex gap-2">
-            <Button onClick={handleLoadUrl}>Load from URL</Button>
-            <Button variant="outline" onClick={triggerFileInput}>
-              <UploadCloud className="mr-2" />
-              Upload File
+        <div className="flex flex-col gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-2">
+                <Input
+                    type="text"
+                    value={inputUrl}
+                    onChange={handleUrlChange}
+                    placeholder="Enter .glb or .gltf model URL"
+                    className="flex-grow"
+                />
+                <Button onClick={handleLoadUrl} className="flex-shrink-0">Load from URL</Button>
+            </div>
+            
+            <div className="flex items-center gap-4 sm:hidden">
+                <hr className="flex-grow border-border" />
+                <span className="text-muted-foreground text-sm">OR</span>
+                <hr className="flex-grow border-border" />
+            </div>
+
+            <Button variant="outline" onClick={triggerFileInput} className="w-full">
+                <UploadCloud className="mr-2" />
+                Upload File
             </Button>
             <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept=".glb,.gltf"
-              className="hidden"
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".glb,.gltf"
+                className="hidden"
             />
-          </div>
         </div>
 
         <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center">
@@ -172,17 +185,17 @@ export function ModelViewerComponent() {
              )}
         </div>
 
-        <div className="flex flex-wrap gap-4 justify-center mt-6">
-            <Button variant="outline" onClick={() => rotate(-15)}>
+        <div className="grid grid-cols-2 md:flex md:flex-wrap gap-4 justify-center mt-6">
+            <Button variant="outline" size="sm" onClick={() => rotate(-15)}>
                 <RotateCcw className="mr-2" /> Rotate
             </Button>
-            <Button variant="outline" onClick={() => zoom(0.8)}>
+            <Button variant="outline" size="sm" onClick={() => zoom(0.8)}>
                 <ZoomIn className="mr-2" /> Zoom In
             </Button>
-            <Button variant="outline" onClick={() => zoom(1.25)}>
+            <Button variant="outline" size="sm" onClick={() => zoom(1.25)}>
                 <ZoomOut className="mr-2" /> Zoom Out
             </Button>
-            <Button variant="outline" onClick={resetCamera}>
+            <Button variant="outline" size="sm" onClick={resetCamera}>
                 <RefreshCw className="mr-2" /> Reset View
             </Button>
         </div>
