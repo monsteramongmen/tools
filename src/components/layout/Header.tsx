@@ -24,6 +24,17 @@ const toolsNavLinks = [
   { href: "/model-viewer", label: "Model Viewer", icon: Box },
 ];
 
+function NavLink({ href, label }: { href: string; label: string }) {
+  const pathname = usePathname();
+  const isActive = pathname === href;
+
+  return (
+    <Button asChild variant="ghost" className={cn(isActive ? "text-primary hover:text-primary" : "text-muted-foreground", "hover:text-foreground", "text-base")}>
+      <Link href={href}>{label}</Link>
+    </Button>
+  );
+}
+
 export default function Header() {
   const pathname = usePathname();
   const [isMobileToolsOpen, setIsMobileToolsOpen] = useState(false);
