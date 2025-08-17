@@ -15,6 +15,7 @@ type BulkQrCode = {
     id: string;
     data: string;
     url: string;
+    filename: string;
 }
 
 export default function QrGeneratorView() {
@@ -76,7 +77,7 @@ export default function QrGeneratorView() {
 
         const generatedCodes: BulkQrCode[] = await Promise.all(
             data.map(async (item, index) => {
-                const dataString = typeof item === 'object' ? JSON.stringify(item) : String(item);
+                const dataString = typeof item === 'object' && item !== null ? JSON.stringify(item) : String(item);
                 const url = await QRCode.toDataURL(dataString, {
                     errorCorrectionLevel: 'H',
                     type: 'image/png',
@@ -84,7 +85,18 @@ export default function QrGeneratorView() {
                     margin: 1,
                     width: 256,
                 });
-                return { id: `qrcode-${index}-${Date.now()}`, data: dataString, url };
+
+                let filename = `qrcode_${index + 1}`;
+                if (typeof item === 'object' && item !== null && Object.keys(item).length > 0) {
+                    const firstKey = Object.keys(item)[0];
+                    const firstValue = item[firstKey];
+                    // Sanitize the value to be a valid filename
+                    filename = String(firstValue).substring(0, 50).replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                } else if (typeof item === 'string') {
+                    filename = item.substring(0, 50).replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                }
+
+                return { id: `qrcode-${index}-${Date.now()}`, data: dataString, url, filename: `${filename}.png` };
             })
         );
         setBulkQrCodes(generatedCodes);
@@ -108,7 +120,7 @@ export default function QrGeneratorView() {
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
-    a.click();
+a.click();
     document.body.removeChild(a);
   };
   
@@ -117,12 +129,10 @@ export default function QrGeneratorView() {
     
     const zip = new JSZip();
     
-    await Promise.all(bulkQrCodes.map(async (qr, index) => {
+    await Promise.all(bulkQrCodes.map(async (qr) => {
       const response = await fetch(qr.url);
       const blob = await response.blob();
-      // Sanitize data for filename
-      const safeFilename = qr.data.substring(0, 20).replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      zip.file(`qrcode_${index + 1}_${safeFilename}.png`, blob);
+      zip.file(qr.filename, blob);
     }));
 
     zip.generateAsync({ type: 'blob' }).then((content) => {
@@ -222,7 +232,7 @@ export default function QrGeneratorView() {
                     <Textarea
                         value={bulkJson}
                         onChange={(e) => setBulkJson(e.target.value)}
-                        placeholder='Enter a JSON array of strings or objects, e.g., ["hello", "world"]'
+                        placeholder='Enter a JSON array of strings or objects, e.g., ["hello", {"id": "123", "name": "world"}]'
                         className="flex-grow min-h-[150px] font-mono text-sm"
                     />
                     <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
@@ -244,7 +254,7 @@ export default function QrGeneratorView() {
                                         <img src={qr.url} alt="Generated QR Code" className="w-full h-auto aspect-square" />
                                     </div>
                                     <p className="text-xs text-muted-foreground w-full truncate text-center" title={qr.data}>{qr.data}</p>
-                                    <Button size="sm" variant="outline" className="w-full" onClick={() => downloadQrCode(qr.url, `${qr.id}.png`)}>
+                                    <Button size="sm" variant="outline" className="w-full" onClick={() => downloadQrCode(qr.url, qr.filename)}>
                                         <Download className="mr-1 h-4 w-4" /> Download
                                     </Button>
                                 </div>
