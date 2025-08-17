@@ -91,17 +91,16 @@ export function ModelViewerComponent() {
   };
 
   const zoom = (factor: number) => {
-    if (modelViewerRef.current) {
-      const current = modelViewerRef.current.cameraOrbit;
-      const [theta, phi, radius] = current.split(' ').map(parseFloat);
-      modelViewerRef.current.cameraOrbit = `${theta}deg ${phi}deg ${radius * factor}m`;
+    const viewer = modelViewerRef.current;
+    if (viewer) {
+      viewer.cameraOrbit = `${viewer.cameraOrbit.split(' ')[0]} ${viewer.cameraOrbit.split(' ')[1]} ${viewer.cameraOrbit.split(' ')[2] * factor}m`;
     }
   };
 
   const rotate = (deg: number) => {
-    if (modelViewerRef.current) {
-      const [theta, phi, radius] = modelViewerRef.current.cameraOrbit.split(' ').map(parseFloat);
-      modelViewerRef.current.cameraOrbit = `${theta + deg}deg ${phi}deg ${radius}m`;
+    const viewer = modelViewerRef.current;
+    if (viewer) {
+        viewer.cameraOrbit = `${parseFloat(viewer.cameraOrbit.split(' ')[0]) + deg}deg ${viewer.cameraOrbit.split(' ')[1]} ${viewer.cameraOrbit.split(' ')[2]}`;
     }
   };
   
