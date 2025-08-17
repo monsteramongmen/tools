@@ -23,23 +23,27 @@ export default function CaptureView() {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
 
-  useEffect(() => {
-    const getDevices = async () => {
-      try {
-        await navigator.mediaDevices.getUserMedia({ video: true }); // Prompt for permission
-        const mediaDevices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = mediaDevices.filter(device => device.kind === 'videoinput');
-        setDevices(videoDevices);
-        if (videoDevices.length > 0) {
-          setSelectedDeviceId(videoDevices[0].deviceId);
-        }
-      } catch (err) {
-        console.error('Error enumerating devices:', err);
-        setError("Could not access camera. Please grant permission in your browser settings.");
+  const getDevices = useCallback(async () => {
+    try {
+      if (!navigator.mediaDevices?.enumerateDevices) {
+        throw new Error("Media devices API not available.");
       }
-    };
+      await navigator.mediaDevices.getUserMedia({ video: true }); // Prompt for permission
+      const mediaDevices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = mediaDevices.filter(device => device.kind === 'videoinput');
+      setDevices(videoDevices);
+      if (videoDevices.length > 0 && !selectedDeviceId) {
+        setSelectedDeviceId(videoDevices[0].deviceId);
+      }
+    } catch (err) {
+      console.error('Error enumerating devices:', err);
+      setError("Could not access camera. Please grant permission in your browser settings.");
+    }
+  }, [selectedDeviceId]);
+
+  useEffect(() => {
     getDevices();
-  }, []);
+  }, [getDevices]);
 
   const stopCamera = useCallback(() => {
     if (stream) {
@@ -53,21 +57,24 @@ export default function CaptureView() {
   }, [stream]);
 
   const startCamera = useCallback(async () => {
-    if (stream) {
+    if (isCameraOn && stream) {
         stopCamera();
     }
     setError(null);
     setIsLoading(true);
+    setCapturedImage(null);
     try {
       if (!selectedDeviceId) {
-        throw new Error("No camera selected");
+        await getDevices();
+        if(!selectedDeviceId) {
+          throw new Error("No camera selected");
+        }
       }
       const constraints: MediaStreamConstraints = {
         video: { 
           deviceId: { exact: selectedDeviceId },
           width: { ideal: 4096 },
           height: { ideal: 2160 },
-          aspectRatio: captureMode === 'landscape' ? 16/9 : 9/16,
         },
         audio: false 
       };
@@ -87,7 +94,7 @@ export default function CaptureView() {
         } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
           message = "No camera was found on this device.";
         } else if (err.name === 'OverconstrainedError' || err.name === 'ConstraintNotSatisfiedError') {
-          message = `The selected camera doesn't support the requested resolution or aspect ratio.`
+          message = `The selected camera doesn't support the requested resolution.`
         }
       }
       setError(message);
@@ -96,23 +103,44 @@ export default function CaptureView() {
     } finally {
         setIsLoading(false);
     }
-  }, [captureMode, stopCamera, stream, toast, selectedDeviceId]);
+  }, [isCameraOn, stream, stopCamera, selectedDeviceId, getDevices, toast]);
   
   const capture = () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-
-      const videoWidth = video.videoWidth;
-      const videoHeight = video.videoHeight;
-      
-      canvas.width = videoWidth;
-      canvas.height = videoHeight;
-
       const context = canvas.getContext('2d');
+      
       if (context) {
-        context.drawImage(video, 0, 0, videoWidth, videoHeight);
-        const dataUrl = canvas.toDataURL('image/jpeg', 1.0); // Use JPEG for higher quality
+        // Set canvas dimensions to match the displayed video, preserving aspect ratio
+        const { clientWidth, clientHeight } = video;
+        canvas.width = clientWidth;
+        canvas.height = clientHeight;
+
+        // Calculate the source rectangle to crop from the video stream
+        const videoAspectRatio = video.videoWidth / video.videoHeight;
+        const canvasAspectRatio = canvas.width / canvas.height;
+        
+        let sx, sy, sWidth, sHeight;
+
+        if (videoAspectRatio > canvasAspectRatio) {
+          // Video is wider than canvas
+          sHeight = video.videoHeight;
+          sWidth = sHeight * canvasAspectRatio;
+          sx = (video.videoWidth - sWidth) / 2;
+          sy = 0;
+        } else {
+          // Video is taller than canvas
+          sWidth = video.videoWidth;
+          sHeight = sWidth / canvasAspectRatio;
+          sy = (video.videoHeight - sHeight) / 2;
+          sx = 0;
+        }
+        
+        // Draw the cropped video frame to the canvas
+        context.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
+        
+        const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
         setCapturedImage(dataUrl);
         stopCamera();
       }
@@ -121,7 +149,9 @@ export default function CaptureView() {
 
   const retry = () => {
     setCapturedImage(null);
-    startCamera();
+    if(selectedDeviceId) {
+        startCamera();
+    }
   };
 
   const downloadImage = () => {
@@ -166,22 +196,24 @@ export default function CaptureView() {
         });
     }
   };
-  
+
   useEffect(() => {
-    if (isCameraOn) {
+    if (isCameraOn && selectedDeviceId) {
         startCamera();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [captureMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDeviceId]);
 
   useEffect(() => {
     return () => stopCamera();
   }, [stopCamera]);
   
   const handleDeviceChange = (deviceId: string) => {
-    setSelectedDeviceId(deviceId);
-    if(isCameraOn) {
-      startCamera();
+    if(deviceId !== selectedDeviceId) {
+      setSelectedDeviceId(deviceId);
+      if (isCameraOn) {
+        startCamera();
+      }
     }
   }
 
@@ -196,7 +228,7 @@ export default function CaptureView() {
           ) : (
             <>
               <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${showVideo ? '' : 'hidden'}`} />
-              <div className={`absolute inset-0 flex items-center justify-center text-center text-muted-foreground p-4 ${showVideo ? 'hidden' : ''}`}>
+              <div className={`absolute inset-0 flex flex-col items-center justify-center text-center text-muted-foreground p-4 ${showVideo ? 'hidden' : 'flex'}`}>
                   {isLoading ? (
                     <div className="flex flex-col items-center gap-2">
                       <Loader2 className="w-8 h-8 animate-spin" />
@@ -207,12 +239,12 @@ export default function CaptureView() {
                       <VideoOff className="w-16 h-16 mx-auto mb-4" />
                       <p className="max-w-xs">{error}</p>
                     </>
-                  ) : (
+                  ) : !isCameraOn ? (
                     <>
                       <Camera className="w-16 h-16 mx-auto mb-4" />
                       <p>Camera is off. Press "Start Camera" to begin.</p>
                     </>
-                  )}
+                  ) : null }
               </div>
             </>
           )}
