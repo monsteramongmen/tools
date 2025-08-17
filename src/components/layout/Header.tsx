@@ -26,10 +26,10 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
-        <div className="mr-4 flex items-center">
+        <div className="mr-4 flex items-center pl-2">
           <Link href="/" className="flex items-center gap-2">
             <Cpu className="h-6 w-6 text-primary" />
-            <span className="font-bold text-lg">AR Toolkit</span>
+            <span className="font-bold text-lg">Toolkit</span>
           </Link>
         </div>
         <nav className="hidden md:flex items-center space-x-1 text-sm font-medium">
@@ -50,7 +50,7 @@ export default function Header() {
                 variant="ghost"
                  className={cn(
                   "text-base",
-                  toolLinks.some(link => pathname.startsWith(link.href)) ? "text-primary hover:text-accent-foreground" : "text-muted-foreground"
+                  toolLinks.some(link => pathname.startsWith(link.href)) ? "text-primary hover:text-primary hover:text-primary-foreground" : "text-muted-foreground"
                 )}
               >
                 Tools
@@ -86,7 +86,7 @@ export default function Header() {
               <div className="flex flex-col gap-4 p-4">
                 <Link href="/" className="flex items-center gap-2 mb-4">
                   <Cpu className="h-6 w-6 text-primary" />
-                  <span className="font-bold text-lg">AR Toolkit</span>
+                  <span className="font-bold text-lg">Toolkit</span>
                 </Link>
                 <Link
                     href="/"

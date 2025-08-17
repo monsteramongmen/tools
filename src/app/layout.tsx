@@ -5,7 +5,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
 export const metadata: Metadata = {
-  title: 'AR Toolkit',
+  title: 'Toolkit',
   description: 'A modern, mobile-responsive web app for AR experiences and media capture.',
 };
 
