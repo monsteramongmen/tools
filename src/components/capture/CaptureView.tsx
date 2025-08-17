@@ -45,9 +45,6 @@ export default function CaptureView() {
       
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
       setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
       setIsCameraOn(true);
     } catch (err) {
       console.error("Error accessing camera:", err);
@@ -132,11 +129,19 @@ export default function CaptureView() {
         startCamera();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [captureMode])
+  }, [captureMode]);
+
+  useEffect(() => {
+    if (stream && videoRef.current) {
+        videoRef.current.srcObject = stream;
+    }
+  }, [stream]);
 
   useEffect(() => {
     return () => stopCamera();
   }, [stopCamera]);
+
+  const showVideo = isCameraOn && !capturedImage;
 
   return (
     <Card>
@@ -144,27 +149,30 @@ export default function CaptureView() {
         <div className={`relative w-full bg-muted rounded-lg overflow-hidden flex items-center justify-center ${captureMode === 'landscape' ? 'aspect-video' : 'aspect-[9/16]'}`}>
           {capturedImage ? (
             <img src={capturedImage} alt="Captured" className="w-full h-full object-contain" />
-          ) : isCameraOn ? (
-            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
           ) : (
-            <div className="text-center text-muted-foreground">
-              {isLoading ? (
-                <div className="flex flex-col items-center gap-2">
-                  <Loader2 className="w-8 h-8 animate-spin" />
-                  <p>Starting camera...</p>
+            <>
+              <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover ${showVideo ? '' : 'hidden'}`} />
+              {!showVideo && (
+                <div className="text-center text-muted-foreground p-4">
+                  {isLoading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="w-8 h-8 animate-spin" />
+                      <p>Starting camera...</p>
+                    </div>
+                  ) : error ? (
+                    <>
+                      <VideoOff className="w-16 h-16 mx-auto mb-4" />
+                      <p className="max-w-xs">{error}</p>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="w-16 h-16 mx-auto mb-4" />
+                      <p>Camera is off. Press "Start Camera" to begin.</p>
+                    </>
+                  )}
                 </div>
-              ) : error ? (
-                <>
-                  <VideoOff className="w-16 h-16 mx-auto mb-4" />
-                  <p className="max-w-xs">{error}</p>
-                </>
-              ) : (
-                <>
-                  <Camera className="w-16 h-16 mx-auto mb-4" />
-                  <p>Camera is off. Press "Start Camera" to begin.</p>
-                </>
               )}
-            </div>
+            </>
           )}
         </div>
         <canvas ref={canvasRef} className="hidden" />
@@ -172,7 +180,7 @@ export default function CaptureView() {
         <div className="flex flex-wrap gap-4 justify-center mt-6">
           {!isCameraOn && !capturedImage && (
             <>
-                <RadioGroup value={captureMode} onValueChange={(value: 'landscape' | 'portrait') => setCaptureMode(value)} className="flex gap-4 items-center">
+                <RadioGroup defaultValue={captureMode} onValueChange={(value: 'landscape' | 'portrait') => setCaptureMode(value)} className="flex gap-4 items-center">
                     <Label className="flex items-center gap-2 cursor-pointer">
                         <RadioGroupItem value="landscape" id="landscape" />
                         <Crop className="w-4 h-4" /> Landscape
