@@ -5,8 +5,7 @@ import type { ModelViewerElement } from '@google/model-viewer';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { RotateCcw, ZoomIn, ZoomOut, Move, RefreshCw, Loader2, AlertTriangle, UploadCloud } from 'lucide-react';
-import { Label } from '@/components/ui/label';
+import { RotateCcw, ZoomIn, ZoomOut, RefreshCw, Loader2, AlertTriangle, UploadCloud } from 'lucide-react';
 
 // Required for declaration merging
 import '@google/model-viewer';
@@ -93,7 +92,9 @@ export function ModelViewerComponent() {
   const zoom = (factor: number) => {
     const viewer = modelViewerRef.current;
     if (viewer) {
-      viewer.cameraOrbit = `${viewer.cameraOrbit.split(' ')[0]} ${viewer.cameraOrbit.split(' ')[1]} ${viewer.cameraOrbit.split(' ')[2] * factor}m`;
+      const [theta, phi, radius] = viewer.cameraOrbit.split(' ');
+      const newRadius = parseFloat(radius) * factor;
+      viewer.cameraOrbit = `${theta} ${phi} ${newRadius}m`;
     }
   };
 
