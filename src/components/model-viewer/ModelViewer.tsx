@@ -1,5 +1,6 @@
+
 "use client";
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { ModelViewerElement } from '@google/model-viewer';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,29 @@ export function ModelViewerComponent() {
     // Dynamically import the model-viewer to ensure it only runs on the client
     import('@google/model-viewer');
   }, []);
+
+  const handleLoad = useCallback(() => {
+    setIsLoading(false);
+  }, []);
+
+  const handleError = useCallback((event: any) => {
+    setIsLoading(false);
+    setError(`Failed to load model: ${event.detail?.source?.url || modelSrc}`);
+  }, [modelSrc]);
+
+  useEffect(() => {
+    const modelViewer = modelViewerRef.current;
+    if (modelViewer) {
+      modelViewer.addEventListener('load', handleLoad);
+      modelViewer.addEventListener('error', handleError);
+
+      // Cleanup event listeners
+      return () => {
+        modelViewer.removeEventListener('load', handleLoad);
+        modelViewer.removeEventListener('error', handleError);
+      };
+    }
+  }, [modelSrc, handleLoad, handleError]);
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputUrl(e.target.value);
@@ -124,11 +148,6 @@ export function ModelViewerComponent() {
                 shadow-intensity="1"
                 autoplay
                 style={{ width: '100%', height: '100%', position: 'absolute' }}
-                onLoad={() => setIsLoading(false)}
-                onError={() => {
-                  setIsLoading(false);
-                  setError(`Failed to load model from: ${modelSrc}`);
-                }}
             >
             </model-viewer>
              {isLoading && (
