@@ -92,9 +92,15 @@ export function ModelViewerComponent() {
   const zoom = (factor: number) => {
     const viewer = modelViewerRef.current;
     if (viewer) {
-      const [theta, phi, radiusStr] = viewer.cameraOrbit.split(' ');
+      const currentOrbit = viewer.getAttribute('camera-orbit');
+      if (!currentOrbit) return;
+
+      const [theta, phi, radiusStr] = currentOrbit.split(' ');
+      
+      const isPercentage = radiusStr.includes('%');
       const radius = parseFloat(radiusStr);
-      const unit = radiusStr.replace(String(radius), '');
+      const unit = isPercentage ? '%' : 'm';
+      
       const newRadius = Math.max(0.1, radius * factor);
       viewer.cameraOrbit = `${theta} ${phi} ${newRadius}${unit}`;
     }
@@ -172,17 +178,17 @@ export function ModelViewerComponent() {
              )}
         </div>
 
-        <div className="flex flex-wrap gap-4 justify-center mt-6">
-            <Button variant="outline" onClick={() => rotate(-15)}>
+        <div className="grid grid-cols-2 md:flex md:flex-wrap gap-4 justify-center mt-6">
+            <Button variant="outline" size="sm" onClick={() => rotate(-15)}>
                 <RotateCcw className="mr-2" /> Rotate
             </Button>
-            <Button variant="outline" onClick={() => zoom(0.8)}>
+            <Button variant="outline" size="sm" onClick={() => zoom(0.8)}>
                 <ZoomIn className="mr-2" /> Zoom In
             </Button>
-            <Button variant="outline" onClick={() => zoom(1.25)}>
+            <Button variant="outline" size="sm" onClick={() => zoom(1.25)}>
                 <ZoomOut className="mr-2" /> Zoom Out
             </Button>
-            <Button variant="outline" onClick={resetCamera}>
+            <Button variant="outline" size="sm" onClick={resetCamera}>
                 <RefreshCw className="mr-2" /> Reset View
             </Button>
         </div>
