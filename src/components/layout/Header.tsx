@@ -32,7 +32,7 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center">
+      <div className="container flex h-16 items-center pl-6">
         <div className="mr-4 flex items-center">
           <Link href="/" className="flex items-center gap-2">
             <Cpu className="h-6 w-6 text-primary" />

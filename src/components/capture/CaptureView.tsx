@@ -26,6 +26,7 @@ export default function CaptureView() {
   useEffect(() => {
     const getDevices = async () => {
       try {
+        await navigator.mediaDevices.getUserMedia({ video: true }); // Prompt for permission
         const mediaDevices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = mediaDevices.filter(device => device.kind === 'videoinput');
         setDevices(videoDevices);
@@ -34,6 +35,7 @@ export default function CaptureView() {
         }
       } catch (err) {
         console.error('Error enumerating devices:', err);
+        setError("Could not access camera. Please grant permission in your browser settings.");
       }
     };
     getDevices();
@@ -60,11 +62,12 @@ export default function CaptureView() {
       if (!selectedDeviceId) {
         throw new Error("No camera selected");
       }
-      const constraints = {
+      const constraints: MediaStreamConstraints = {
         video: { 
           deviceId: { exact: selectedDeviceId },
-          width: { ideal: captureMode === 'landscape' ? 1920 : 1080 },
-          height: { ideal: captureMode === 'landscape' ? 1080 : 1920 },
+          width: { ideal: 4096 },
+          height: { ideal: 2160 },
+          aspectRatio: captureMode === 'landscape' ? 16/9 : 9/16,
         },
         audio: false 
       };
@@ -83,6 +86,8 @@ export default function CaptureView() {
           message = "Camera access was denied. Please allow camera access in your browser settings.";
         } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
           message = "No camera was found on this device.";
+        } else if (err.name === 'OverconstrainedError' || err.name === 'ConstraintNotSatisfiedError') {
+          message = `The selected camera doesn't support the requested resolution or aspect ratio.`
         }
       }
       setError(message);
@@ -98,26 +103,16 @@ export default function CaptureView() {
       const video = videoRef.current;
       const canvas = canvasRef.current;
 
-      const videoAspectRatio = video.videoWidth / video.videoHeight;
-      const canvasAspectRatio = video.clientWidth / video.clientHeight;
-
-      canvas.width = video.clientWidth;
-      canvas.height = video.clientHeight;
+      const videoWidth = video.videoWidth;
+      const videoHeight = video.videoHeight;
+      
+      canvas.width = videoWidth;
+      canvas.height = videoHeight;
 
       const context = canvas.getContext('2d');
       if (context) {
-        let sx = 0, sy = 0, sWidth = video.videoWidth, sHeight = video.videoHeight;
-        
-        if (videoAspectRatio > canvasAspectRatio) { // video is wider than canvas
-            sWidth = video.videoHeight * canvasAspectRatio;
-            sx = (video.videoWidth - sWidth) / 2;
-        } else { // video is taller than canvas
-            sHeight = video.videoWidth / canvasAspectRatio;
-            sy = (video.videoHeight - sHeight) / 2;
-        }
-
-        context.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/png');
+        context.drawImage(video, 0, 0, videoWidth, videoHeight);
+        const dataUrl = canvas.toDataURL('image/jpeg', 1.0); // Use JPEG for higher quality
         setCapturedImage(dataUrl);
         stopCamera();
       }
@@ -133,7 +128,7 @@ export default function CaptureView() {
     if (capturedImage) {
       const a = document.createElement('a');
       a.href = capturedImage;
-      a.download = `capture-${Date.now()}.png`;
+      a.download = `capture-${Date.now()}.jpg`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -145,7 +140,7 @@ export default function CaptureView() {
       try {
         const response = await fetch(capturedImage);
         const blob = await response.blob();
-        const file = new File([blob], `capture-${Date.now()}.png`, { type: 'image/png' });
+        const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
         
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({
@@ -177,11 +172,18 @@ export default function CaptureView() {
         startCamera();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [captureMode, selectedDeviceId]);
+  }, [captureMode]);
 
   useEffect(() => {
     return () => stopCamera();
   }, [stopCamera]);
+  
+  const handleDeviceChange = (deviceId: string) => {
+    setSelectedDeviceId(deviceId);
+    if(isCameraOn) {
+      startCamera();
+    }
+  }
 
   const showVideo = isCameraOn && !capturedImage && stream;
 
@@ -194,8 +196,7 @@ export default function CaptureView() {
           ) : (
             <>
               <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${showVideo ? '' : 'hidden'}`} />
-              {!showVideo && (
-                <div className="text-center text-muted-foreground p-4">
+              <div className={`absolute inset-0 flex items-center justify-center text-center text-muted-foreground p-4 ${showVideo ? 'hidden' : ''}`}>
                   {isLoading ? (
                     <div className="flex flex-col items-center gap-2">
                       <Loader2 className="w-8 h-8 animate-spin" />
@@ -212,8 +213,7 @@ export default function CaptureView() {
                       <p>Camera is off. Press "Start Camera" to begin.</p>
                     </>
                   )}
-                </div>
-              )}
+              </div>
             </>
           )}
         </div>
@@ -235,15 +235,15 @@ export default function CaptureView() {
                     </RadioGroup>
 
                     {devices.length > 1 && (
-                      <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
+                      <Select value={selectedDeviceId} onValueChange={handleDeviceChange}>
                         <SelectTrigger className="w-full sm:w-[200px]">
                             <SwitchCamera className="mr-2 h-4 w-4" />
                             <SelectValue placeholder="Select a camera" />
                         </SelectTrigger>
                         <SelectContent>
-                            {devices.map((device) => (
+                            {devices.map((device, index) => (
                                 <SelectItem key={device.deviceId} value={device.deviceId}>
-                                    {device.label || `Camera ${devices.indexOf(device) + 1}`}
+                                    {device.label || `Camera ${index + 1}`}
                                 </SelectItem>
                             ))}
                         </SelectContent>
