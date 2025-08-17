@@ -50,7 +50,7 @@ export default function Header() {
                 variant="ghost"
                  className={cn(
                   "text-base",
-                  toolLinks.some(link => pathname.startsWith(link.href)) ? "text-primary hover:text-primary" : "text-muted-foreground"
+                  toolLinks.some(link => pathname.startsWith(link.href)) ? "text-primary hover:text-accent-foreground" : "text-muted-foreground"
                 )}
               >
                 Tools
