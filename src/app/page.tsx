@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, View } from "lucide-react";
+import { Camera, View, Box } from "lucide-react";
 
 export default function Home() {
   return (
@@ -13,7 +13,7 @@ export default function Home() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
         <Card className="hover:shadow-lg transition-shadow duration-300">
           <CardHeader className="items-center text-center">
             <div className="p-4 bg-primary/10 rounded-full mb-4">
@@ -44,6 +44,23 @@ export default function Home() {
           <CardContent className="text-center">
             <Button asChild>
               <Link href="/capture-share">Open Camera</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow duration-300 md:col-span-2 lg:col-span-1">
+          <CardHeader className="items-center text-center">
+            <div className="p-4 bg-primary/10 rounded-full mb-4">
+              <Box className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">Model Viewer</CardTitle>
+            <CardDescription>
+              View and interact with 3D models in GLB or GLTF format directly in your browser.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button asChild>
+              <Link href="/model-viewer">Open Viewer</Link>
             </Button>
           </CardContent>
         </Card>

@@ -11,6 +11,7 @@ const navLinks = [
   { href: "/", label: "Home" },
   { href: "/ar-viewer", label: "AR Viewer" },
   { href: "/capture-share", label: "Capture & Share" },
+  { href: "/model-viewer", label: "Model Viewer" },
 ];
 
 export default function Header() {
