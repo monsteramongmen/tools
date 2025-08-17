@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { ModelViewerElement } from '@google/model-viewer';
@@ -6,9 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { RotateCcw, ZoomIn, ZoomOut, RefreshCw, Loader2, AlertTriangle, UploadCloud } from 'lucide-react';
-
-// Required for declaration merging
-import '@google/model-viewer';
 
 declare global {
   namespace JSX {
@@ -109,7 +105,10 @@ export function ModelViewerComponent() {
   const rotate = (deg: number) => {
     const viewer = modelViewerRef.current;
     if (viewer) {
-        viewer.cameraOrbit = `${parseFloat(viewer.cameraOrbit.split(' ')[0]) + deg}deg ${viewer.cameraOrbit.split(' ')[1]} ${viewer.cameraOrbit.split(' ')[2]}`;
+      const currentOrbit = viewer.getAttribute('camera-orbit');
+      if (!currentOrbit) return;
+      const [theta, phi, radius] = currentOrbit.split(' ');
+      viewer.cameraOrbit = `${parseFloat(theta) + deg}deg ${phi} ${radius}`;
     }
   };
   
