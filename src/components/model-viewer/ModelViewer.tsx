@@ -32,7 +32,7 @@ export function ModelViewerComponent() {
 
   useEffect(() => {
     // Dynamically import the model-viewer to ensure it only runs on the client
-    import('@google/model-viewer');
+    import('@google/model-viewer').catch(e => console.error(e));
   }, []);
 
   const handleLoad = useCallback(() => {
