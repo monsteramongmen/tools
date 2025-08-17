@@ -90,7 +90,7 @@ export default function ARView() {
       <Script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe-master.min.js" onLoad={() => setScriptsLoaded(prev => ({...prev, aframe: true}))} />
       <Script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-aframe-three.prod.js" onLoad={() => setScriptsLoaded(prev => ({...prev, mindar: true}))} />
       
-      <div className="container mx-auto px-4 py-8 relative">
+      <div className="container mx-auto px-4 py-8 relative max-w-3xl">
         <h1 className="text-3xl font-bold mb-4">AR Viewer</h1>
         <p className="text-muted-foreground mb-6">Point your camera at the target image to see the magic. You can find the target image <a href="https://raw.githubusercontent.com/hiukim/mind-ar-js/master/examples/image-tracking/assets/card-example/card.png" target="_blank" rel="noopener noreferrer" className="text-primary underline">here</a>.</p>
         
