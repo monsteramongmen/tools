@@ -32,7 +32,7 @@ export function ModelViewerComponent() {
 
   useEffect(() => {
     // Dynamically import the model-viewer to ensure it only runs on the client
-    import('@google/model-viewer').catch(e => console.error(e));
+    import('@google/model-viewer').catch(e => console.error("Could not load model-viewer", e));
   }, []);
 
   const handleLoad = useCallback(() => {
@@ -92,9 +92,11 @@ export function ModelViewerComponent() {
   const zoom = (factor: number) => {
     const viewer = modelViewerRef.current;
     if (viewer) {
-      const [theta, phi, radius] = viewer.cameraOrbit.split(' ');
-      const newRadius = parseFloat(radius) * factor;
-      viewer.cameraOrbit = `${theta} ${phi} ${newRadius}m`;
+      const [theta, phi, radiusStr] = viewer.cameraOrbit.split(' ');
+      const radius = parseFloat(radiusStr);
+      const unit = radiusStr.replace(String(radius), '');
+      const newRadius = radius * factor;
+      viewer.cameraOrbit = `${theta} ${phi} ${newRadius}${unit}`;
     }
   };
 
