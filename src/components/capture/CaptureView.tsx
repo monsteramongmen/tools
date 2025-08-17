@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Camera, Download, Share2, RefreshCw, VideoOff, Loader2, AspectRatio, Crop } from 'lucide-react';
+import { Camera, Download, Share2, RefreshCw, VideoOff, Loader2, Crop } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 
@@ -17,14 +17,23 @@ export default function CaptureView() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCameraOn, setIsCameraOn] = useState(false);
   const [captureMode, setCaptureMode] = useState<'landscape' | 'portrait'>('landscape');
 
-  const startCamera = useCallback(async () => {
-    setError(null);
-    setIsLoading(true);
+  const stopCamera = useCallback(() => {
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+      setIsCameraOn(false);
     }
+  }, [stream]);
+
+  const startCamera = useCallback(async () => {
+    if (stream) {
+        stopCamera();
+    }
+    setError(null);
+    setIsLoading(true);
     try {
       const constraints = {
         video: { 
@@ -39,6 +48,7 @@ export default function CaptureView() {
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
+      setIsCameraOn(true);
     } catch (err) {
       console.error("Error accessing camera:", err);
       let message = "Could not access the camera. Please check permissions.";
@@ -47,18 +57,12 @@ export default function CaptureView() {
       }
       setError(message);
       toast({ variant: 'destructive', title: 'Camera Error', description: message });
+      setIsCameraOn(false);
     } finally {
         setIsLoading(false);
     }
-  }, [stream, toast, captureMode]);
-
-  const stopCamera = useCallback(() => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-  }, [stream]);
-
+  }, [captureMode, stream, stopCamera, toast]);
+  
   const capture = () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
@@ -122,14 +126,13 @@ export default function CaptureView() {
         });
     }
   };
-
+  
   useEffect(() => {
-    if (stream) {
-      startCamera();
+    if (isCameraOn) {
+        startCamera();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [captureMode]);
-
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [captureMode])
 
   useEffect(() => {
     return () => stopCamera();
@@ -141,7 +144,7 @@ export default function CaptureView() {
         <div className={`relative w-full bg-muted rounded-lg overflow-hidden flex items-center justify-center ${captureMode === 'landscape' ? 'aspect-video' : 'aspect-[9/16]'}`}>
           {capturedImage ? (
             <img src={capturedImage} alt="Captured" className="w-full h-full object-contain" />
-          ) : stream ? (
+          ) : isCameraOn ? (
             <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
           ) : (
             <div className="text-center text-muted-foreground">
@@ -167,7 +170,7 @@ export default function CaptureView() {
         <canvas ref={canvasRef} className="hidden" />
         
         <div className="flex flex-wrap gap-4 justify-center mt-6">
-          {!stream && !capturedImage && (
+          {!isCameraOn && !capturedImage && (
             <>
                 <RadioGroup value={captureMode} onValueChange={(value: 'landscape' | 'portrait') => setCaptureMode(value)} className="flex gap-4 items-center">
                     <Label className="flex items-center gap-2 cursor-pointer">
@@ -186,7 +189,7 @@ export default function CaptureView() {
             </>
           )}
 
-          {stream && !capturedImage && (
+          {isCameraOn && !capturedImage && (
             <>
               <Button onClick={capture}>
                 <Camera className="mr-2 h-4 w-4" />
