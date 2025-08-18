@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, View, Box, QrCode } from "lucide-react";
+import { Camera, View, Box, QrCode, Wand2 } from "lucide-react";
 
 export default function Home() {
   return (
@@ -81,6 +81,24 @@ export default function Home() {
             </Button>
           </CardContent>
         </Card>
+        
+        <Card className="hover:shadow-lg transition-shadow duration-300">
+          <CardHeader className="items-center text-center">
+            <div className="p-4 bg-primary/10 rounded-full mb-4">
+              <Wand2 className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">AI Image Generator</CardTitle>
+            <CardDescription>
+              Create stunning and unique images from a simple text description using AI.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button asChild>
+              <Link href="/image-generator">Generate Images</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
       </div>
     </div>
   );
