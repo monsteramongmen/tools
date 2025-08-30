@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -14,25 +15,52 @@ export default function ARView() {
   const { toast } = useToast();
 
   const [isClient, setIsClient] = useState(false);
-  const [scriptsLoaded, setScriptsLoaded] = useState({ aframe: false, mindar: false });
+  const [librariesLoaded, setLibrariesLoaded] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
   const [mode, setMode] = useState<'video' | 'model'>('model');
   const [modelRotation, setModelRotation] = useState({ x: 0, y: 0, z: 0 });
   const [modelScale, setModelScale] = useState(0.5);
 
-  const allScriptsLoaded = scriptsLoaded.aframe && scriptsLoaded.mindar;
-
   useEffect(() => {
     setIsClient(true);
   }, []);
-  
+
+  useEffect(() => {
+    if (!isClient) return;
+
+    // Check if the libraries are already loaded
+    if ((window as any).AFRAME && (window as any).MINDAR) {
+      setLibrariesLoaded(true);
+      return;
+    }
+
+    // If not, set up an interval to check for them.
+    const interval = setInterval(() => {
+      if ((window as any).AFRAME && (window as any).MINDAR) {
+        setLibrariesLoaded(true);
+        clearInterval(interval);
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [isClient]);
+
   const handleStart = () => {
     if (sceneRef.current) {
       const videoEl = document.querySelector("#video-asset") as HTMLVideoElement | null;
-      sceneRef.current.systems['mindar-image-system'].start();
-      setIsStarted(true);
-      if (mode === 'video' && videoEl) {
-        videoEl.play();
+      try {
+        sceneRef.current.systems['mindar-image-system'].start();
+        setIsStarted(true);
+        if (mode === 'video' && videoEl) {
+          videoEl.play();
+        }
+      } catch (e) {
+        console.error("Failed to start AR system:", e);
+        toast({
+          variant: 'destructive',
+          title: 'AR Error',
+          description: 'Could not start AR experience. Check camera permissions.',
+        });
       }
     }
   };
@@ -79,7 +107,7 @@ export default function ARView() {
         });
       });
     }
-  }, [allScriptsLoaded, toast]);
+  }, [librariesLoaded, toast]);
   
   if (!isClient) {
     return null;
@@ -87,22 +115,22 @@ export default function ARView() {
 
   return (
     <>
-      <Script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe-master.min.js" onLoad={() => setScriptsLoaded(prev => ({...prev, aframe: true}))} />
-      <Script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-aframe-three.prod.js" onLoad={() => setScriptsLoaded(prev => ({...prev, mindar: true}))} />
+      <Script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe-master.min.js" strategy="lazyOnload" />
+      <Script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-aframe-three.prod.js" strategy="lazyOnload" />
       
       <div className="container mx-auto px-4 py-8 relative max-w-3xl">
         <h1 className="text-3xl font-bold mb-4">AR Viewer</h1>
         <p className="text-muted-foreground mb-6">Point your camera at the target image to see the magic. You can find the target image <a href="https://raw.githubusercontent.com/hiukim/mind-ar-js/master/examples/image-tracking/assets/card-example/card.png" target="_blank" rel="noopener noreferrer" className="text-primary underline">here</a>.</p>
         
         <div className="relative w-full h-[70vh] border rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-          {!allScriptsLoaded && (
+          {!librariesLoaded && (
             <div className="flex flex-col items-center gap-2 text-muted-foreground">
               <Loader2 className="w-8 h-8 animate-spin" />
               <p>Loading AR libraries...</p>
             </div>
           )}
 
-          {allScriptsLoaded && (
+          {librariesLoaded && (
             <a-scene
               ref={sceneRef}
               mindar-image={`imageTargetSrc: https://cdn.jsdelivr.net/gh/RanjanLGHIVE/cdn/uploads/mindar_target.mind; autoStart: false; filterMinCF:0.0001; filterBeta: 0.001;`}
@@ -145,7 +173,7 @@ export default function ARView() {
 
           <div className="absolute top-4 left-4 z-10">
             {!isStarted ? (
-              <Button onClick={handleStart} disabled={!allScriptsLoaded}>
+              <Button onClick={handleStart} disabled={!librariesLoaded}>
                 <Play className="mr-2 h-4 w-4" /> Start Camera
               </Button>
             ) : (
