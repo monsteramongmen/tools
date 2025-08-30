@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -15,136 +14,168 @@ export default function ARView() {
   const { toast } = useToast();
 
   const [isClient, setIsClient] = useState(false);
-  const [librariesLoaded, setLibrariesLoaded] = useState(false);
+  const [libsReady, setLibsReady] = useState(false);
+  const [sceneReady, setSceneReady] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
-  const [mode, setMode] = useState<'video' | 'model'>('model');
+  const [mode, setMode] = useState<"video" | "model">("model");
   const [modelRotation, setModelRotation] = useState({ x: 0, y: 0, z: 0 });
   const [modelScale, setModelScale] = useState(0.5);
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  useEffect(() => setIsClient(true), []);
 
+  // Detect A-Frame + MindAR (A-Frame build) readiness
   useEffect(() => {
     if (!isClient) return;
-
-    // Check if the libraries are already loaded
-    if ((window as any).AFRAME && (window as any).MINDAR) {
-      setLibrariesLoaded(true);
+    const check = () =>
+      typeof (window as any).AFRAME !== "undefined" &&
+      typeof (window as any).MINDAR !== "undefined";
+    if (check()) {
+      setLibsReady(true);
       return;
     }
-
-    // If not, set up an interval to check for them.
-    const interval = setInterval(() => {
-      if ((window as any).AFRAME && (window as any).MINDAR) {
-        setLibrariesLoaded(true);
-        clearInterval(interval);
+    const id = setInterval(() => {
+      if (check()) {
+        setLibsReady(true);
+        clearInterval(id);
       }
-    }, 500);
-
-    return () => clearInterval(interval);
+    }, 200);
+    return () => clearInterval(id);
   }, [isClient]);
 
+  // Wait for <a-scene> loaded before accessing systems
+  useEffect(() => {
+    if (!libsReady) return;
+    const sceneEl = sceneRef.current as any | null;
+    if (!sceneEl) return;
+
+    const onLoaded = () => setSceneReady(true);
+    if (sceneEl.hasLoaded) {
+      setSceneReady(true);
+    } else {
+      sceneEl.addEventListener("loaded", onLoaded, { once: true });
+    }
+
+    // Optional AR error forwarding
+    const onARError = (event: any) => {
+      toast({
+        variant: "destructive",
+        title: "AR Error",
+        description: event?.detail?.error || "Could not start AR experience.",
+      });
+    };
+    sceneEl.addEventListener("arError", onARError);
+    return () => {
+      sceneEl.removeEventListener("loaded", onLoaded);
+      sceneEl.removeEventListener("arError", onARError);
+    };
+  }, [libsReady, toast]);
+
   const handleStart = () => {
-    if (sceneRef.current) {
-      const videoEl = document.querySelector("#video-asset") as HTMLVideoElement | null;
-      try {
-        sceneRef.current.systems['mindar-image-system'].start();
-        setIsStarted(true);
-        if (mode === 'video' && videoEl) {
-          videoEl.play();
-        }
-      } catch (e) {
-        console.error("Failed to start AR system:", e);
-        toast({
-          variant: 'destructive',
-          title: 'AR Error',
-          description: 'Could not start AR experience. Check camera permissions.',
-        });
-      }
+    const sceneEl = sceneRef.current as any | null;
+    if (!sceneEl) return;
+
+    const sys = sceneEl.systems?.["mindar-image-system"];
+    if (!sys) {
+      toast({
+        variant: "destructive",
+        title: "AR Error",
+        description: "MindAR system not initialized yet. Please wait a moment.",
+      });
+      return;
+    }
+    const videoEl = document.querySelector("#video-asset") as HTMLVideoElement | null;
+    try {
+      sys.start();
+      setIsStarted(true);
+      if (mode === "video" && videoEl) videoEl.play();
+    } catch (e) {
+      console.error("Failed to start AR system:", e);
+      toast({
+        variant: "destructive",
+        title: "AR Error",
+        description: "Could not start AR experience. Check camera permissions.",
+      });
     }
   };
 
   const handleStop = () => {
-    if (sceneRef.current) {
-      const videoEl = document.querySelector("#video-asset") as HTMLVideoElement | null;
-      sceneRef.current.systems['mindar-image-system'].stop();
-      setIsStarted(false);
-      if (videoEl) {
-        videoEl.pause();
-      }
-    }
+    const sceneEl = sceneRef.current as any | null;
+    if (!sceneEl) return;
+    const sys = sceneEl.systems?.["mindar-image-system"];
+    if (!sys) return;
+
+    const videoEl = document.querySelector("#video-asset") as HTMLVideoElement | null;
+    sys.stop();
+    setIsStarted(false);
+    if (videoEl) videoEl.pause();
   };
 
-  const handleModeChange = (newMode: 'video' | 'model') => {
+  const handleModeChange = (newMode: "video" | "model") => {
     const videoEl = document.querySelector("#video-asset") as HTMLVideoElement | null;
     setMode(newMode);
-    if(isStarted) {
-      if (newMode === 'video' && videoEl) {
-        videoEl.play();
-      } else if (videoEl) {
-        videoEl.pause();
-      }
+    if (isStarted) {
+      if (newMode === "video" && videoEl) videoEl.play();
+      else if (videoEl) videoEl.pause();
     }
-  }
-
-  const rotateModel = (axis: 'x' | 'y' | 'z',_direction: 'cw' | 'ccw') => {
-    setModelRotation(prev => ({ ...prev, [axis]: prev[axis] + (_direction === 'cw' ? 15 : -15) }));
   };
 
-  const zoomModel = (direction: 'in' | 'out') => {
-    setModelScale(prev => Math.max(0.1, prev + (direction === 'in' ? 0.1 : -0.1)));
+  const rotateModel = (axis: "x" | "y" | "z", direction: "cw" | "ccw") => {
+    setModelRotation((prev) => ({ ...prev, [axis]: prev[axis] + (direction === "cw" ? 15 : -15) }));
+  };
+  const zoomModel = (direction: "in" | "out") => {
+    setModelScale((prev) => Math.max(0.1, prev + (direction === "in" ? 0.1 : -0.1)));
   };
 
-  useEffect(() => {
-    const arSystem = sceneRef.current?.systems['mindar-image-system'];
-    if (arSystem) {
-      sceneRef.current.addEventListener('arError', (event: any) => {
-        toast({
-          variant: 'destructive',
-          title: 'AR Error',
-          description: event.detail.error || 'Could not start AR experience.',
-        });
-      });
-    }
-  }, [librariesLoaded, toast]);
-  
-  if (!isClient) {
-    return null;
-  }
+  if (!isClient) return null;
 
   return (
     <>
-      <Script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe-master.min.js" strategy="lazyOnload" />
-      <Script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-aframe-three.prod.js" strategy="lazyOnload" />
-      
+      <Script src="https://aframe.io/releases/1.5.0/aframe.min.js" strategy="lazyOnload" />
+      <Script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js" strategy="lazyOnload" />
+
       <div className="container mx-auto px-4 py-8 relative max-w-3xl">
         <h1 className="text-3xl font-bold mb-4">AR Viewer</h1>
-        <p className="text-muted-foreground mb-6">Point your camera at the target image to see the magic. You can find the target image <a href="https://raw.githubusercontent.com/hiukim/mind-ar-js/master/examples/image-tracking/assets/card-example/card.png" target="_blank" rel="noopener noreferrer" className="text-primary underline">here</a>.</p>
-        
+        <p className="text-muted-foreground mb-6">
+          Point your camera at the target image to see the magic. You can find the target image{" "}
+          <a
+            href="https://raw.githubusercontent.com/hiukim/mind-ar-js/master/examples/image-tracking/assets/card-example/card.png"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline"
+          >
+            here
+          </a>
+          .
+        </p>
+
         <div className="relative w-full h-[70vh] border rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-          {!librariesLoaded && (
+          {!(libsReady && sceneReady) && (
             <div className="flex flex-col items-center gap-2 text-muted-foreground">
               <Loader2 className="w-8 h-8 animate-spin" />
               <p>Loading AR libraries...</p>
             </div>
           )}
 
-          {librariesLoaded && (
+          {libsReady && (
             <a-scene
               ref={sceneRef}
-              mindar-image={`imageTargetSrc: https://cdn.jsdelivr.net/gh/RanjanLGHIVE/cdn/uploads/mindar_target.mind; autoStart: false; filterMinCF:0.0001; filterBeta: 0.001;`}
+              mindar-image={`imageTargetSrc: https://cdn.jsdelivr.net/gh/RanjanLGHIVE/cdn/uploads/mindar_target.mind; autoStart: false; filterMinCF: 0.0001; filterBeta: 0.001;`}
               color-space="sRGB"
               renderer="logarithmicDepthBuffer: true;"
               vr-mode-ui="enabled: false"
               device-orientation-permission-ui="enabled: false"
               class="w-full h-full"
+              embedded
             >
               <a-assets>
                 <video
                   id="video-asset"
                   src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-                  preload="auto" loop muted playsInline crossOrigin="anonymous"
+                  preload="auto"
+                  loop
+                  muted
+                  playsInline
+                  crossOrigin="anonymous"
                 ></video>
                 <a-asset-item
                   id="model-asset"
@@ -152,15 +183,21 @@ export default function ARView() {
                   crossOrigin="anonymous"
                 ></a-asset-item>
               </a-assets>
+
               <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
               <a-entity mindar-image-target="targetIndex: 0">
                 <a-video
-                  visible={mode === 'video'}
+                  visible={mode === "video"}
                   src="#video-asset"
-                  width="1" height="0.55" position="0 0 0" rotation="0 0 0"
+                  width="1"
+                  height="0.55"
+                  position="0 0 0"
+                  rotation="0 0 0"
                 ></a-video>
+
                 <a-gltf-model
-                  visible={mode === 'model'}
+                  visible={mode === "model"}
                   src="#model-asset"
                   rotation={`${modelRotation.x} ${modelRotation.y} ${modelRotation.z}`}
                   scale={`${modelScale} ${modelScale} ${modelScale}`}
@@ -173,7 +210,7 @@ export default function ARView() {
 
           <div className="absolute top-4 left-4 z-10">
             {!isStarted ? (
-              <Button onClick={handleStart} disabled={!librariesLoaded}>
+              <Button onClick={handleStart} disabled={!(libsReady && sceneReady)}>
                 <Play className="mr-2 h-4 w-4" /> Start Camera
               </Button>
             ) : (
@@ -185,44 +222,53 @@ export default function ARView() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 mt-8">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Display Mode</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <RadioGroup value={mode} onValueChange={(value: 'video' | 'model') => handleModeChange(value)}>
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="model" id="r-model" />
-                            <Label htmlFor="r-model">3D Model</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="video" id="r-video" />
-                            <Label htmlFor="r-video">Video</Label>
-                        </div>
-                    </RadioGroup>
-                </CardContent>
-            </Card>
-            <Card className={mode !== 'model' ? 'opacity-50 pointer-events-none' : ''}>
-                <CardHeader>
-                    <CardTitle>3D Model Controls</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div>
-                        <Label className="mb-2 block">Rotation</Label>
-                        <div className="flex flex-wrap gap-2">
-                            <Button variant="outline" size="sm" onClick={() => rotateModel('y', 'ccw')}><RotateCcw className="mr-1 h-4 w-4" /> Y-axis</Button>
-                            <Button variant="outline" size="sm" onClick={() => rotateModel('y', 'cw')}><RotateCw className="mr-1 h-4 w-4" /> Y-axis</Button>
-                        </div>
-                    </div>
-                    <div>
-                        <Label className="mb-2 block">Zoom</Label>
-                        <div className="flex flex-wrap gap-2">
-                            <Button variant="outline" size="sm" onClick={() => zoomModel('in')}><ZoomIn className="mr-1 h-4 w-4" /> Zoom In</Button>
-                            <Button variant="outline" size="sm" onClick={() => zoomModel('out')}><ZoomOut className="mr-1 h-4 w-4" /> Zoom Out</Button>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Display Mode</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup value={mode} onValueChange={(value: "video" | "model") => handleModeChange(value)}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="model" id="r-model" />
+                  <Label htmlFor="r-model">3D Model</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="video" id="r-video" />
+                  <Label htmlFor="r-video">Video</Label>
+                </div>
+              </RadioGroup>
+            </CardContent>
+          </Card>
+
+          <Card className={mode !== "model" ? "opacity-50 pointer-events-none" : ""}>
+            <CardHeader>
+              <CardTitle>3D Model Controls</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label className="mb-2 block">Rotation</Label>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={() => rotateModel("y", "ccw")}>
+                    <RotateCcw className="mr-1 h-4 w-4" /> Y-axis
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => rotateModel("y", "cw")}>
+                    <RotateCw className="mr-1 h-4 w-4" /> Y-axis
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <Label className="mb-2 block">Zoom</Label>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={() => zoomModel("in")}>
+                    <ZoomIn className="mr-1 h-4 w-4" /> Zoom In
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => zoomModel("out")}>
+                    <ZoomOut className="mr-1 h-4 w-4" /> Zoom Out
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </>
