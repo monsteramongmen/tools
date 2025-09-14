@@ -54,7 +54,8 @@ export default function ScannerView() {
       stream.getTracks().forEach(track => track.stop());
       videoRef.current.srcObject = null;
     }
-    if (codeReader.current) {
+    // Defensive check to prevent runtime errors
+    if (codeReader.current && typeof codeReader.current.reset === 'function') {
         codeReader.current.reset();
     }
     setIsScanning(false);
@@ -66,7 +67,11 @@ export default function ScannerView() {
       toast({ variant: 'destructive', title: 'No Camera Selected', description: 'Please select a camera device.'});
       return;
     }
-    if (!codeReader.current) return;
+    
+    // Ensure we have a fresh reader instance if it was somehow lost
+    if (!codeReader.current) {
+        codeReader.current = new BrowserMultiFormatReader();
+    }
 
     setIsLoading(true);
     setIsScanning(true);
@@ -97,14 +102,9 @@ export default function ScannerView() {
     } finally {
         setIsLoading(false);
         setIsScanning(false);
-        // Ensure camera is off after scan attempt
-        if (videoRef.current && videoRef.current.srcObject) {
-          const stream = videoRef.current.srcObject as MediaStream;
-          stream.getTracks().forEach(track => track.stop());
-          videoRef.current.srcObject = null;
-        }
+        stopScan(); // Ensure camera is always stopped after an attempt
     }
-  }, [selectedDeviceId, toast]);
+  }, [selectedDeviceId, toast, stopScan]);
   
   const decodeFromImage = async (source: string | File) => {
     setError(null);
@@ -112,9 +112,7 @@ export default function ScannerView() {
     setIsLoading(true);
     
     if (!codeReader.current) {
-        setIsLoading(false);
-        setError("Scanner not initialized.");
-        return;
+        codeReader.current = new BrowserMultiFormatReader();
     }
     
     try {
