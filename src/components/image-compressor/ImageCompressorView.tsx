@@ -143,12 +143,15 @@ export default function ImageCompressorView() {
         setOriginalFiles([]);
         setResults([]);
         setIsLoading(false);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
         setInputKey(Date.now());
     }
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            <Card className="lg:col-span-1 sticky top-24">
+            <Card className="lg:col-span-1">
                 <CardHeader>
                     <CardTitle>Compression Settings</CardTitle>
                 </CardHeader>
