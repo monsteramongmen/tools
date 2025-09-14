@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, View, Box, QrCode, Wand2 } from "lucide-react";
+import { Camera, View, Box, QrCode, Wand2, Crop } from "lucide-react";
 
 export default function Home() {
   return (
@@ -95,6 +95,23 @@ export default function Home() {
           <CardContent className="text-center">
             <Button asChild>
               <Link href="/image-generator">Generate Images</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        
+        <Card className="hover:shadow-lg transition-shadow duration-300">
+          <CardHeader className="items-center text-center">
+            <div className="p-4 bg-primary/10 rounded-full mb-4">
+              <Crop className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">Image Cropper</CardTitle>
+            <CardDescription>
+              Upload an image and crop it to your desired dimensions and shape.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button asChild>
+              <Link href="/image-cropper">Open Cropper</Link>
             </Button>
           </CardContent>
         </Card>
