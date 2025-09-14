@@ -16,7 +16,7 @@ type ScanMode = "camera" | "file" | "url";
 export default function ScannerView() {
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const codeReader = useRef(new BrowserMultiFormatReader());
+  const codeReader = useRef<BrowserMultiFormatReader | null>(null);
   
   const [scanResult, setScanResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +29,16 @@ export default function ScannerView() {
   const [mode, setMode] = useState<ScanMode>("camera");
   const [imageUrl, setImageUrl] = useState('');
 
+  // Initialize codeReader ref
+  useEffect(() => {
+    if (!codeReader.current) {
+        codeReader.current = new BrowserMultiFormatReader();
+    }
+  }, []);
+
   const getDevices = useCallback(async () => {
     try {
+      await navigator.mediaDevices.getUserMedia({ video: true }); // Request permission first
       const mediaDevices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = mediaDevices.filter(device => device.kind === 'videoinput');
       setDevices(videoDevices);
@@ -48,7 +56,9 @@ export default function ScannerView() {
   }, [getDevices]);
 
   const stopScan = useCallback(() => {
-    codeReader.current.reset();
+    if (codeReader.current && typeof codeReader.current.reset === 'function') {
+        codeReader.current.reset();
+    }
     setIsScanning(false);
     setIsLoading(false);
   }, []);
@@ -58,6 +68,7 @@ export default function ScannerView() {
       toast({ variant: 'destructive', title: 'No Camera Selected', description: 'Please select a camera device.'});
       return;
     }
+    if (!codeReader.current) return;
 
     setIsLoading(true);
     setIsScanning(true);
@@ -100,6 +111,12 @@ export default function ScannerView() {
     setScanResult(null);
     setIsLoading(true);
     
+    if (!codeReader.current) {
+        setIsLoading(false);
+        setError("Scanner not initialized.");
+        return;
+    }
+    
     try {
       let src: string;
       if (typeof source === 'string') {
@@ -119,8 +136,8 @@ export default function ScannerView() {
         message = "No barcode was found in the image. Please try a clearer image."
       } else if (err instanceof DOMException && err.name === 'NotSupportedError') {
           message = "Image format not supported by the browser."
-      } else if (err.name !== 'FormatException') {
-          message = err.message;
+      } else {
+          message = "No barcode found. The image may be too blurry or the format is not supported.";
       }
       setError(message);
       toast({ variant: 'destructive', title: 'Decoding Error', description: message });
