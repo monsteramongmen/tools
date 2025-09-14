@@ -18,6 +18,8 @@ const supportedBarcodeTypes = [
     'industrial2of5', 'interleaved2of5', 'itf14', 'telepen', 'code39', 'codabar'
 ];
 
+const twoDBarcodeTypes = ['qrcode', 'pdf417', 'datamatrix', 'azteccode'];
+
 const fontOptions = ['Helvetica', 'Arial', 'Courier', 'Times'];
 
 type DownloadFormat = 'png' | 'svg';
@@ -56,7 +58,6 @@ export default function BarcodeGeneratorView() {
     const handleGenerate = () => {
         const canvas = canvasRef.current;
         if (canvas) {
-            // **Fix:** Explicitly clear canvas before re-drawing
             const ctx = canvas.getContext('2d');
             if (ctx) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -70,8 +71,18 @@ export default function BarcodeGeneratorView() {
                     setHasGenerated(false);
                     return;
                 }
+                
+                const generationOptions = { ...options };
+                if (twoDBarcodeTypes.includes(generationOptions.bcid)) {
+                    // For 2D barcodes, height is not applicable and can cause issues.
+                    // Let the library determine the size based on scale.
+                    // @ts-ignore
+                    delete generationOptions.height; 
+                    generationOptions.padding = 1;
+                }
 
-                bwipjs.toCanvas(canvas, options);
+
+                bwipjs.toCanvas(canvas, generationOptions);
                 setError(null);
                 setHasGenerated(true);
             } catch (e: any) {
@@ -107,7 +118,13 @@ export default function BarcodeGeneratorView() {
             }
         } else if (downloadFormat === 'svg') {
             try {
-                const svgString = bwipjs.toSVG(options as ToSvgOptions);
+                 const generationOptions = { ...options };
+                if (twoDBarcodeTypes.includes(generationOptions.bcid)) {
+                    // @ts-ignore
+                    delete generationOptions.height;
+                     generationOptions.padding = 1;
+                }
+                const svgString = bwipjs.toSVG(generationOptions as ToSvgOptions);
                 const blob = new Blob([svgString], { type: 'image/svg+xml' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
