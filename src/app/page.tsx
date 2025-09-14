@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, View, Box, QrCode, Wand2, Crop, Minimize } from "lucide-react";
+import { Camera, View, Box, QrCode, Wand2, Crop, Minimize, Barcode } from "lucide-react";
 
 export default function Home() {
   return (
@@ -36,7 +36,7 @@ export default function Home() {
             <div className="p-4 bg-primary/10 rounded-full mb-4">
               <Camera className="w-8 h-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl">Capture & Share</CardTitle>
+            <CardTitle className="text-2xl">Capture & Share</Card_title>
             <CardDescription>
               Use your device's camera to take high-quality snapshots and share them with the world.
             </CardDescription>
@@ -53,7 +53,7 @@ export default function Home() {
             <div className="p-4 bg-primary/10 rounded-full mb-4">
               <Box className="w-8 h-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl">Model Viewer</CardTitle>
+            <CardTitle className="text-2xl">Model Viewer</Card_title>
             <CardDescription>
               View and interact with 3D models in GLB or GLTF format directly in your browser.
             </CardDescription>
@@ -70,7 +70,7 @@ export default function Home() {
             <div className="p-4 bg-primary/10 rounded-full mb-4">
               <QrCode className="w-8 h-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl">QR Code Generator</CardTitle>
+            <CardTitle className="text-2xl">QR Code Generator</Card_title>
             <CardDescription>
               Create and share QR codes for URLs, text, and more. Instantly scannable.
             </CardDescription>
@@ -87,7 +87,7 @@ export default function Home() {
             <div className="p-4 bg-primary/10 rounded-full mb-4">
               <Wand2 className="w-8 h-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl">AI Image Generator</CardTitle>
+            <CardTitle className="text-2xl">AI Image Generator</Card_title>
             <CardDescription>
               Create stunning and unique images from a simple text description using AI.
             </CardDescription>
@@ -104,7 +104,7 @@ export default function Home() {
             <div className="p-4 bg-primary/10 rounded-full mb-4">
               <Crop className="w-8 h-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl">Image Cropper</CardTitle>
+            <CardTitle className="text-2xl">Image Cropper</Card_title>
             <CardDescription>
               Upload an image and crop it to your desired dimensions and shape.
             </CardDescription>
@@ -121,7 +121,7 @@ export default function Home() {
             <div className="p-4 bg-primary/10 rounded-full mb-4">
               <Minimize className="w-8 h-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl">Image Compressor</CardTitle>
+            <CardTitle className="text-2xl">Image Compressor</Card_title>
             <CardDescription>
               Compress and optimize your images with fine-grained control.
             </CardDescription>
@@ -129,6 +129,23 @@ export default function Home() {
           <CardContent className="text-center">
             <Button asChild>
               <Link href="/image-compressor">Open Compressor</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        
+        <Card className="hover:shadow-lg transition-shadow duration-300">
+          <CardHeader className="items-center text-center">
+            <div className="p-4 bg-primary/10 rounded-full mb-4">
+              <Barcode className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">Barcode Generator</Card_title>
+            <CardDescription>
+              Create customizable barcodes for any purpose.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button asChild>
+              <Link href="/barcode-generator">Create Barcode</Link>
             </Button>
           </CardContent>
         </Card>
