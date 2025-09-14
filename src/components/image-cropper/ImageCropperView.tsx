@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   UploadCloud,
@@ -370,6 +371,12 @@ export default function ImageCropperView() {
                     ) : (
                         <p>Could not generate preview.</p>
                     )}
+                    <DialogFooter>
+                        <Button onClick={handleDownload} disabled={!completedCrop}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
               </Dialog>
               <Button onClick={handleDownload} disabled={!completedCrop}>
