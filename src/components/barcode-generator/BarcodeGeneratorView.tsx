@@ -18,10 +18,19 @@ import { Textarea } from '../ui/textarea';
 const supportedBarcodeTypes = [
     'code128', 'ean13', 'ean8', 'upca', 'upce', 'isbn', 'gs1-128', 'qrcode',
     'pdf417', 'datamatrix', 'azteccode', 'pharmacode', 'postnet', 'planet',
-    'industrial2of5', 'interleaved2of5', 'itf14', 'telepen', 'code39', 'codabar'
+    'industrial2of5', 'interleaved2of5', 'itf14', 'telepen', 'code39', 'codabar',
+    'auspost', 'azteccode', 'bc412', 'channelcode', 'code11', 'code39ext', 'code93', 'codeone',
+    'coop2of5', 'daft', 'databarexpanded', 'databarlimited', 'datalogic2of5',
+    'dotcode', 'ean13composite', 'ean8composite', 'flattermarken', 'gs1-cc',
+    'gs1datamatrix', 'gs1northamericancoupon', 'gs1qrcode', 'hanxin', 'hibc-128',
+    'hibc-39', 'hibc-datamatrix', 'hibc-qrcode', 'iata2of5', 'identcode', 'industrial2of5',
+    'interleaved2of5', 'isbn', 'ismn', 'issn', 'itf14', 'japanpost', 'kix', 'leitcode', 'matrix2of5',
+    'maxicode', 'micropdf417', 'microqrcode', 'msi', 'onecode', 'pharmacode', 'pharmacode2',
+    'planet', 'plessey', 'posicode', 'postnet', 'pzn', 'royalmail', 'sscc18', 'swissqrcode',
+    'telepen', 'telepennumeric', 'ultracode', 'upca', 'upcacomposite', 'upce', 'upcecomposite'
 ];
 
-const twoDBarcodeTypes = ['qrcode', 'pdf417', 'datamatrix', 'azteccode'];
+const twoDBarcodeTypes = ['qrcode', 'pdf417', 'datamatrix', 'azteccode', 'maxicode', 'dotcode', 'hanxin', 'gs1datamatrix', 'gs1qrcode', 'micropdf417', 'microqrcode', 'swissqrcode'];
 
 const fontOptions = ['Helvetica', 'Arial', 'Courier', 'Times'];
 
@@ -69,68 +78,19 @@ export default function BarcodeGeneratorView() {
         setOptions(prev => ({ ...prev, [key]: value }));
     };
 
-    const generateSingle = (e: React.FormEvent) => {
-        e.preventDefault();
-        setError(null);
-        
-        const canvas = canvasRef.current;
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                canvas.width = 0;
-                canvas.height = 0;
-            }
-
-            try {
-                if (!options.text) {
-                    setError("Text to encode cannot be empty.");
-                    setHasGenerated(false);
-                    return;
-                }
-                
-                const generationOptions = { ...options };
-                if (twoDBarcodeTypes.includes(generationOptions.bcid)) {
-                    // @ts-ignore
-                    delete generationOptions.height; 
-                    generationOptions.padding = 1;
-                }
-
-                bwipjs.toCanvas(canvas, generationOptions);
-                setError(null);
-                setHasGenerated(true);
-            } catch (e: any) {
-                console.error('Barcode generation error:', e);
-                const friendlyMessage = e.message || 'Invalid options for the selected barcode type.';
-                setError(friendlyMessage);
-                setHasGenerated(false);
-            }
-        }
-    }
-
-    const generateBulk = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!bulkJson) {
-            setError('Please enter a valid JSON array.');
-            return;
-        }
-        setError('');
+    const generateBarcodes = async (data: any[]) => {
         setIsLoading(true);
+        setError(null);
         setBulkBarcodes([]);
 
         try {
-            const data = JSON.parse(bulkJson);
-            if (!Array.isArray(data)) {
-                throw new Error('Input is not a JSON array.');
-            }
-
             const generationPromises = data.map(async (item: any, index: number) => {
                 const dataString = typeof item === 'object' && item !== null ? JSON.stringify(item) : String(item);
                 
                 const generationOptions: ToSvgOptions = {
                     ...options,
                     text: dataString,
-                    scale: 2, // Use a smaller scale for bulk previews
+                    scale: mode === 'single' ? 3 : 2,
                 };
 
                 if (twoDBarcodeTypes.includes(generationOptions.bcid)) {
@@ -159,15 +119,49 @@ export default function BarcodeGeneratorView() {
 
         } catch (err: any) {
             const errorMessage = err.message || 'An unknown error occurred.';
+            setError(`Failed to generate barcodes. ${errorMessage}`);
+            setHasGenerated(false);
+            toast({
+                variant: 'destructive',
+                title: 'Generation Error',
+                description: `Could not generate barcodes. ${errorMessage}`,
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const handleSingleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!options.text) {
+            setError("Text to encode cannot be empty.");
+            return;
+        }
+        generateBarcodes([options.text]);
+    }
+
+    const handleBulkSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!bulkJson) {
+            setError('Please enter a valid JSON array.');
+            return;
+        }
+        
+        try {
+            const data = JSON.parse(bulkJson);
+            if (!Array.isArray(data)) {
+                throw new Error('Input is not a JSON array.');
+            }
+            await generateBarcodes(data);
+        } catch (err: any) {
+            const errorMessage = err.message || 'An unknown error occurred.';
             setError(`Failed to process JSON. ${errorMessage}`);
             setHasGenerated(false);
             toast({
                 variant: 'destructive',
-                title: 'Bulk Generation Error',
-                description: `Could not generate barcodes from the provided JSON. ${errorMessage}`,
+                title: 'JSON Error',
+                description: `Could not parse the provided JSON. ${errorMessage}`,
             });
-        } finally {
-            setIsLoading(false);
         }
     }
 
@@ -175,8 +169,8 @@ export default function BarcodeGeneratorView() {
         window.location.reload();
     }
 
-    const downloadBarcode = (format: DownloadFormat) => {
-        if (!hasGenerated || error) {
+    const downloadBarcode = async (format: DownloadFormat) => {
+        if (!hasGenerated || error || bulkBarcodes.length === 0) {
              toast({
                 variant: 'destructive',
                 title: 'Cannot Download',
@@ -185,22 +179,31 @@ export default function BarcodeGeneratorView() {
             return;
         }
 
+        const barcode = bulkBarcodes[0];
+        const canvas = document.createElement('canvas');
+        
+        const generationOptions: ToCanvasOptions = {
+            ...options,
+            text: barcode.data
+        };
+        if (twoDBarcodeTypes.includes(generationOptions.bcid)) {
+            // @ts-ignore
+            delete generationOptions.height;
+            generationOptions.padding = 1;
+        }
+
         if (format === 'png') {
-            const canvas = canvasRef.current;
-            if (canvas) {
+            try {
+                bwipjs.toCanvas(canvas, generationOptions);
                 const a = document.createElement('a');
                 a.href = canvas.toDataURL('image/png');
                 a.download = `${options.bcid}-${options.text}.png`;
                 a.click();
+            } catch (e: any) {
+                toast({ variant: 'destructive', title: 'PNG Generation Error', description: e.message || 'Could not generate PNG.' });
             }
         } else if (format === 'svg') {
             try {
-                 const generationOptions = { ...options };
-                if (twoDBarcodeTypes.includes(generationOptions.bcid)) {
-                    // @ts-ignore
-                    delete generationOptions.height;
-                     generationOptions.padding = 1;
-                }
                 const svgString = bwipjs.toSVG(generationOptions as ToSvgOptions);
                 const blob = new Blob([svgString], { type: 'image/svg+xml' });
                 const url = URL.createObjectURL(blob);
@@ -256,8 +259,22 @@ export default function BarcodeGeneratorView() {
     };
     
     const shareBarcode = async () => {
-        const canvas = canvasRef.current;
-        if (canvas && hasGenerated && !error && navigator.share) {
+         if (!hasGenerated || error || bulkBarcodes.length === 0) {
+             toast({ title: 'Share not available', description: 'No valid barcode to share.'});
+             return;
+         }
+        
+        if (navigator.share) {
+            const barcode = bulkBarcodes[0];
+            const canvas = document.createElement('canvas');
+            const generationOptions: ToCanvasOptions = { ...options, text: barcode.data };
+             if (twoDBarcodeTypes.includes(generationOptions.bcid)) {
+                // @ts-ignore
+                delete generationOptions.height;
+                generationOptions.padding = 1;
+            }
+            bwipjs.toCanvas(canvas, generationOptions);
+            
             canvas.toBlob(async (blob) => {
                 if (blob) {
                     const file = new File([blob], `${options.bcid}-${options.text}.png`, { type: 'image/png' });
@@ -287,12 +304,7 @@ export default function BarcodeGeneratorView() {
         setError('');
         setHasGenerated(false);
         setBulkBarcodes([]);
-        if (canvasRef.current) {
-            const ctx = canvasRef.current.getContext('2d');
-            ctx?.clearRect(0,0,canvasRef.current.width, canvasRef.current.height);
-        }
     }
-
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -317,7 +329,7 @@ export default function BarcodeGeneratorView() {
                              <TabsTrigger value="bulk"><FileJson className="mr-2" />Bulk</TabsTrigger>
                         </TabsList>
                         <TabsContent value="single" className="pt-4">
-                            <form onSubmit={generateSingle} className="space-y-4">
+                            <form onSubmit={handleSingleSubmit} className="space-y-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="text">Text to Encode</Label>
                                     <Input id="text" value={options.text as string} onChange={e => handleOptionChange('text', e.target.value)} />
@@ -328,7 +340,7 @@ export default function BarcodeGeneratorView() {
                             </form>
                         </TabsContent>
                         <TabsContent value="bulk" className="pt-4">
-                            <form onSubmit={generateBulk} className="space-y-4">
+                            <form onSubmit={handleBulkSubmit} className="space-y-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="bulk-json">JSON Array</Label>
                                     <Textarea 
@@ -453,49 +465,51 @@ export default function BarcodeGeneratorView() {
                                 <p className="text-sm">{error}</p>
                             </div>
                         )}
-                        {!hasGenerated && !error && (
+                        {isLoading && (
+                            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                <Loader2 className="w-8 h-8 animate-spin" />
+                                <p>Generating barcodes...</p>
+                            </div>
+                        )}
+                        {!hasGenerated && !error && !isLoading && (
                             <div className="text-muted-foreground text-center">
                                 <p>Your generated barcode(s) will appear here.</p>
                             </div>
                         )}
                         
-                        {hasGenerated && !error && mode === 'single' && (
-                            <div className="flex flex-col items-center gap-4">
-                                <div className="overflow-auto w-full flex justify-center p-2 border bg-white rounded-md">
-                                    <canvas ref={canvasRef} />
-                                </div>
-                                <div className="flex flex-wrap gap-4 justify-center pt-4 border-t border-border w-full">
-                                    <div className="flex items-center gap-2">
-                                        <Select value={downloadFormat} onValueChange={(v: DownloadFormat) => setDownloadFormat(v)}>
-                                            <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="png">PNG</SelectItem>
-                                                <SelectItem value="svg">SVG</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <Button onClick={() => downloadBarcode(downloadFormat)}>
-                                            <Download className="mr-2" /> Download
-                                        </Button>
-                                    </div>
-                                    {navigator.share && (
-                                        <Button variant="outline" onClick={shareBarcode}>
-                                            <Share2 className="mr-2" /> Share
-                                        </Button>
-                                    )}
-                                </div>
-                             </div>
-                        )}
-
-                        {hasGenerated && !error && mode === 'bulk' && (
+                        {hasGenerated && !error && bulkBarcodes.length > 0 && (
                              <div className="flex flex-col items-center gap-6 w-full">
-                                <Button onClick={downloadAllAsZip} variant="default" size="lg">
-                                    <PackageCheck className="mr-2 h-5 w-5" /> Download All as .zip
-                                </Button>
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full">
+                                {mode === 'bulk' && bulkBarcodes.length > 1 && (
+                                    <Button onClick={downloadAllAsZip} variant="default" size="lg">
+                                        <PackageCheck className="mr-2 h-5 w-5" /> Download All as .zip
+                                    </Button>
+                                )}
+                                {mode === 'single' && (
+                                     <div className="flex flex-wrap gap-4 justify-center pt-4 border-t border-border w-full">
+                                        <div className="flex items-center gap-2">
+                                            <Select value={downloadFormat} onValueChange={(v: DownloadFormat) => setDownloadFormat(v)}>
+                                                <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="png">PNG</SelectItem>
+                                                    <SelectItem value="svg">SVG</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <Button onClick={() => downloadBarcode(downloadFormat)}>
+                                                <Download className="mr-2" /> Download
+                                            </Button>
+                                        </div>
+                                        {navigator.share && (
+                                            <Button variant="outline" onClick={shareBarcode}>
+                                                <Share2 className="mr-2" /> Share
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
+                                <div className={`grid gap-4 w-full ${mode === 'single' ? 'grid-cols-1 justify-items-center' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'}`}>
                                     {bulkBarcodes.map((qr) => (
                                         <div key={qr.id} className="flex flex-col items-center gap-2 p-3 border rounded-lg bg-card">
                                             <div className="p-2 bg-white rounded-md border w-full">
-                                                <img src={qr.url} alt="Generated Barcode" className="w-full h-auto aspect-square" />
+                                                <img src={qr.url} alt="Generated Barcode" className="w-full h-auto aspect-square object-contain" />
                                             </div>
                                             <p className="text-xs text-muted-foreground w-full truncate text-center" title={qr.data}>{qr.data}</p>
                                         </div>
@@ -510,3 +524,5 @@ export default function BarcodeGeneratorView() {
         </div>
     );
 }
+
+    
