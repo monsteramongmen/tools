@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { BrowserMultiFormatReader, Result } from '@zxing/browser';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Upload, Loader2 } from 'lucide-react';
 
 interface FileScannerProps {
@@ -23,43 +24,74 @@ export default function FileScanner({ onScanSuccess }: FileScannerProps) {
 
         try {
             const src = URL.createObjectURL(file);
-            const result = await codeReader.current.decodeFromImage(undefined, src);
-            onScanSuccess(result);
+            const img = new Image();
+            img.src = src;
+            img.onload = async () => {
+                try {
+                    const result = await codeReader.current.decodeFromImageElement(img);
+                    onScanSuccess(result);
+                } catch (err) {
+                     console.error(err);
+                    const message = "No barcode was found in the image. Please try a clearer image or a different file.";
+                    setError(message);
+                    toast({ variant: 'destructive', title: 'Decoding Error', description: message });
+                } finally {
+                    URL.revokeObjectURL(src);
+                    setIsLoading(false);
+                    if(fileInputRef.current) {
+                      fileInputRef.current.value = "";
+                    }
+                }
+            };
+            img.onerror = () => {
+                setError("Could not load the selected file as an image.");
+                toast({ variant: 'destructive', title: 'File Error', description: "The selected file could not be loaded as an image." });
+                URL.revokeObjectURL(src);
+                setIsLoading(false);
+            };
+
         } catch (err) {
             console.error(err);
-            const message = "No barcode was found in the image. Please try a clearer image or a different file.";
+            const message = "An unexpected error occurred while preparing the image.";
             setError(message);
-            toast({ variant: 'destructive', title: 'Decoding Error', description: message });
-        } finally {
+            toast({ variant: 'destructive', title: 'Error', description: message });
             setIsLoading(false);
-            // Reset file input to allow re-selection of the same file
-            if(fileInputRef.current) {
-              fileInputRef.current.value = "";
-            }
         }
     };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            decodeFromFile(file);
+            if (file.type.startsWith('image/')) {
+                decodeFromFile(file);
+            } else {
+                toast({ variant: 'destructive', title: 'Invalid File', description: 'Please select a valid image file.'});
+            }
         }
     };
 
+    const triggerFileInput = () => {
+        fileInputRef.current?.click();
+    };
+
+
     return (
-        <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted rounded-lg text-center min-h-[200px]">
+        <div 
+            className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted rounded-lg text-center min-h-[200px] cursor-pointer hover:border-primary transition-colors"
+            onClick={triggerFileInput}
+        >
             <Upload className="w-12 h-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-medium">Upload an Image</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Select an image file containing a barcode.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Click here or drag and drop an image file.</p>
             <Input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 onChange={handleFileChange}
                 disabled={isLoading}
-                className="mt-4 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 w-full max-w-sm"
+                className="hidden"
             />
-            {isLoading && (
+             {isLoading && (
                 <div className="flex items-center gap-2 mt-4 text-muted-foreground">
                     <Loader2 className="animate-spin" />
                     <p>Processing image...</p>
