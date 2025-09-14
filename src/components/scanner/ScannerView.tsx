@@ -291,41 +291,49 @@ export default function ScannerView() {
           </Tabs>
         )}
 
-        {(scanResult || (error && !isLoading && !isScanning)) && (
+        {scanResult && (
             <Card className="mt-8">
                 <CardHeader>
-                    <CardTitle>{scanResult ? 'Scan Result' : 'Error'}</CardTitle>
+                    <CardTitle>Scan Result</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    {scanResult ? (
-                        <div className="space-y-4">
-                            <Textarea readOnly value={scanResult.getText()} className="min-h-[100px] font-mono text-sm" />
-                            <p className="text-sm text-muted-foreground">
-                                <span className="font-semibold">Format:</span> {scanResult.getBarcodeFormat()}
-                            </p>
-                            <div className="flex flex-wrap gap-4">
-                                <Button onClick={copyToClipboard}>
-                                    {copied ? <Check className="mr-2"/> : <Copy className="mr-2" />}
-                                    {copied ? 'Copied!' : 'Copy to Clipboard'}
-                                </Button>
-                                <Button variant="outline" onClick={resetAll}>
-                                    <RefreshCw className="mr-2" /> New Scan
-                                </Button>
-                            </div>
-                        </div>
-                    ) : (
-                         <div className="space-y-4">
-                            <p className="text-destructive">{error}</p>
+                    <div className="space-y-4">
+                        <Textarea readOnly value={scanResult.getText()} className="min-h-[100px] font-mono text-sm" />
+                        <p className="text-sm text-muted-foreground">
+                            <span className="font-semibold">Format:</span> {scanResult.getBarcodeFormat()}
+                        </p>
+                        <div className="flex flex-wrap gap-4">
+                            <Button onClick={copyToClipboard}>
+                                {copied ? <Check className="mr-2"/> : <Copy className="mr-2" />}
+                                {copied ? 'Copied!' : 'Copy to Clipboard'}
+                            </Button>
                             <Button variant="outline" onClick={resetAll}>
-                                <RefreshCw className="mr-2" /> Try Again
+                                <RefreshCw className="mr-2" /> New Scan
                             </Button>
                         </div>
-                    )}
+                    </div>
                 </CardContent>
             </Card>
         )}
-
+        
+        {!scanResult && error && !isLoading && !isScanning && (
+             <Card className="mt-8">
+                <CardHeader>
+                    <CardTitle>Error</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-4">
+                        <p className="text-destructive">{error}</p>
+                        <Button variant="outline" onClick={resetAll}>
+                            <RefreshCw className="mr-2" /> Try Again
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        )}
       </CardContent>
     </Card>
   );
 }
+
+    
