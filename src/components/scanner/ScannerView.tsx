@@ -75,8 +75,6 @@ export default function ScannerView() {
           if (err && err.name !== 'NotFoundException') {
             console.error(err);
             // Don't set a hard error for continuous scanning, just log it.
-            // setError(`An error occurred while scanning: ${err.message}`);
-            // stopScan();
           }
         });
       }
@@ -192,89 +190,91 @@ export default function ScannerView() {
   return (
     <Card>
       <CardContent className="pt-6">
-        <Tabs value={mode} onValueChange={(v) => { resetAll(); setMode(v as ScanMode); }} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="camera"><Camera className="mr-2" />Live Camera</TabsTrigger>
-                <TabsTrigger value="file"><Upload className="mr-2" />Image File</TabsTrigger>
-                <TabsTrigger value="url"><LinkIcon className="mr-2" />Image URL</TabsTrigger>
-            </TabsList>
-            <TabsContent value="camera" className="mt-6">
-                <div className="relative w-full bg-muted rounded-lg overflow-hidden aspect-video flex items-center justify-center">
-                    <video ref={videoRef} className={`w-full h-full object-cover ${isScanning ? '' : 'hidden'}`} />
-                     <div className={`absolute inset-0 flex flex-col items-center justify-center text-center text-muted-foreground p-4 ${isScanning ? 'hidden' : 'flex'}`}>
-                        {isLoading ? (
-                            <div className="flex flex-col items-center gap-2">
-                                <Loader2 className="w-8 h-8 animate-spin" />
-                                <p>Starting camera...</p>
-                            </div>
-                        ) : error ? (
-                             <>
-                              <VideoOff className="w-16 h-16 mx-auto mb-4" />
-                              <p className="max-w-xs">{error}</p>
-                            </>
-                        ) : !isScanning ? (
-                            <>
-                                <ScanLine className="w-16 h-16 mx-auto mb-4 text-primary" />
-                                <p>Camera is off. Press "Start Scan" to begin.</p>
-                            </>
-                        ) : null}
-                    </div>
-                    {isScanning && <div className="absolute top-1/2 left-0 w-full h-0.5 bg-red-500 animate-ping"></div>}
-                </div>
-                 <div className="flex flex-wrap gap-4 justify-center mt-6">
-                    {!isScanning && !scanResult ? (
-                        <>
-                             {devices.length > 0 && (
-                                <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
-                                    <SelectTrigger className="w-full sm:w-[250px]">
-                                        <SelectValue placeholder="Select a camera" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {devices.map((device) => (
-                                            <SelectItem key={device.deviceId} value={device.deviceId}>
-                                                {device.label || `Camera ${devices.indexOf(device) + 1}`}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                            <Button onClick={startScan} disabled={isLoading || !selectedDeviceId}>
-                                <Camera className="mr-2" /> Start Scan
-                            </Button>
-                        </>
-                    ) : ( isScanning &&
-                        <Button variant="destructive" onClick={stopScan}>
-                            <VideoOff className="mr-2" /> Stop Scan
-                        </Button>
-                    )}
-                </div>
-            </TabsContent>
-            <TabsContent value="file" className="mt-6">
-                 <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted rounded-lg text-center min-h-[200px]">
-                    <Upload className="w-12 h-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-medium">Upload an Image</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Select an image file containing a barcode.</p>
-                    <Input type="file" accept="image/*" onChange={handleFileChange} className="mt-4 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 w-full max-w-sm"/>
-                </div>
-            </TabsContent>
-            <TabsContent value="url" className="mt-6">
-                <form onSubmit={handleUrlSubmit} className="flex flex-col items-center gap-4">
-                     <Input
-                        type="text"
-                        value={imageUrl}
-                        onChange={(e) => setImageUrl(e.target.value)}
-                        placeholder="Enter image URL"
-                        className="w-full max-w-lg"
-                    />
-                    <Button type="submit" disabled={isLoading || !imageUrl}>
-                        {isLoading ? <Loader2 className="animate-spin mr-2"/> : <LinkIcon className="mr-2" />} 
-                        Scan from URL
-                    </Button>
-                </form>
-            </TabsContent>
-        </Tabs>
+        {!scanResult && (
+          <Tabs value={mode} onValueChange={(v) => { resetAll(); setMode(v as ScanMode); }} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="camera"><Camera className="mr-2" />Live Camera</TabsTrigger>
+                  <TabsTrigger value="file"><Upload className="mr-2" />Image File</TabsTrigger>
+                  <TabsTrigger value="url"><LinkIcon className="mr-2" />Image URL</TabsTrigger>
+              </TabsList>
+              <TabsContent value="camera" className="mt-6">
+                  <div className="relative w-full bg-muted rounded-lg overflow-hidden aspect-video flex items-center justify-center">
+                      <video ref={videoRef} className={`w-full h-full object-cover ${isScanning ? '' : 'hidden'}`} />
+                       <div className={`absolute inset-0 flex flex-col items-center justify-center text-center text-muted-foreground p-4 ${isScanning ? 'hidden' : 'flex'}`}>
+                          {isLoading ? (
+                              <div className="flex flex-col items-center gap-2">
+                                  <Loader2 className="w-8 h-8 animate-spin" />
+                                  <p>Starting camera...</p>
+                              </div>
+                          ) : error ? (
+                               <>
+                                <VideoOff className="w-16 h-16 mx-auto mb-4" />
+                                <p className="max-w-xs">{error}</p>
+                              </>
+                          ) : !isScanning ? (
+                              <>
+                                  <ScanLine className="w-16 h-16 mx-auto mb-4 text-primary" />
+                                  <p>Camera is off. Press "Start Scan" to begin.</p>
+                              </>
+                          ) : null}
+                      </div>
+                      {isScanning && <div className="absolute top-1/2 left-0 w-full h-0.5 bg-red-500 animate-ping"></div>}
+                  </div>
+                   <div className="flex flex-wrap gap-4 justify-center mt-6">
+                      {!isScanning && !scanResult ? (
+                          <>
+                               {devices.length > 0 && (
+                                  <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
+                                      <SelectTrigger className="w-full sm:w-[250px]">
+                                          <SelectValue placeholder="Select a camera" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                          {devices.map((device) => (
+                                              <SelectItem key={device.deviceId} value={device.deviceId}>
+                                                  {device.label || `Camera ${devices.indexOf(device) + 1}`}
+                                              </SelectItem>
+                                          ))}
+                                      </SelectContent>
+                                  </Select>
+                              )}
+                              <Button onClick={startScan} disabled={isLoading || !selectedDeviceId}>
+                                  <Camera className="mr-2" /> Start Scan
+                              </Button>
+                          </>
+                      ) : ( isScanning &&
+                          <Button variant="destructive" onClick={stopScan}>
+                              <VideoOff className="mr-2" /> Stop Scan
+                          </Button>
+                      )}
+                  </div>
+              </TabsContent>
+              <TabsContent value="file" className="mt-6">
+                   <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted rounded-lg text-center min-h-[200px]">
+                      <Upload className="w-12 h-12 text-muted-foreground" />
+                      <h3 className="mt-4 text-lg font-medium">Upload an Image</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">Select an image file containing a barcode.</p>
+                      <Input type="file" accept="image/*" onChange={handleFileChange} className="mt-4 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 w-full max-w-sm"/>
+                  </div>
+              </TabsContent>
+              <TabsContent value="url" className="mt-6">
+                  <form onSubmit={handleUrlSubmit} className="flex flex-col items-center gap-4">
+                       <Input
+                          type="text"
+                          value={imageUrl}
+                          onChange={(e) => setImageUrl(e.target.value)}
+                          placeholder="Enter image URL"
+                          className="w-full max-w-lg"
+                      />
+                      <Button type="submit" disabled={isLoading || !imageUrl}>
+                          {isLoading ? <Loader2 className="animate-spin mr-2"/> : <LinkIcon className="mr-2" />} 
+                          Scan from URL
+                      </Button>
+                  </form>
+              </TabsContent>
+          </Tabs>
+        )}
 
-        {(scanResult || (error && mode !== 'camera' && !isLoading)) && (
+        {(scanResult || (error && !isLoading && !isScanning)) && (
             <Card className="mt-8">
                 <CardHeader>
                     <CardTitle>{scanResult ? 'Scan Result' : 'Error'}</CardTitle>
