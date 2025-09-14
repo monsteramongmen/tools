@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Share2, Palette, Text, Minimize, Settings, AlertCircle, Wand2, RefreshCw } from 'lucide-react';
+import { Download, Share2, Palette, Text, Settings, AlertCircle, Wand2, RefreshCw } from 'lucide-react';
 
 const supportedBarcodeTypes = [
     'code128', 'ean13', 'ean8', 'upca', 'upce', 'isbn', 'gs1-128', 'qrcode',
@@ -26,14 +26,12 @@ const defaultOptions: ToCanvasOptions = {
     bcid: 'code128',
     text: '1234567890',
     scale: 3,
-    scaleX: undefined,
-    scaleY: undefined,
     height: 10,
+    padding: 10,
     includetext: true,
     textxalign: 'center',
     barcolor: '000000',
     backgroundcolor: 'FFFFFF',
-    padding: 10,
     textsize: 12,
     textfont: 'Helvetica',
     textyalign: 'below',
@@ -200,23 +198,6 @@ export default function BarcodeGeneratorView() {
                                         <Input type="color" value={`#${options.backgroundcolor}`} onChange={(e) => handleOptionChange('backgroundcolor', e.target.value.substring(1))} className="p-1 h-10 w-14" />
                                         <Input id="backgroundcolor" value={options.backgroundcolor as string} onChange={e => handleOptionChange('backgroundcolor', e.target.value.replace('#', ''))} />
                                     </div>
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                        <AccordionItem value="item-2">
-                            <AccordionTrigger><Minimize className="mr-2"/>Size & Padding</AccordionTrigger>
-                            <AccordionContent className="space-y-4 pt-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="scale">Scale</Label>
-                                    <Input id="scale" type="number" value={options.scale} min={1} max={10} onChange={e => handleOptionChange('scale', Number(e.target.value))} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="height">Height (px)</Label>
-                                    <Input id="height" type="number" value={options.height} min={1} max={50} onChange={e => handleOptionChange('height', Number(e.target.value))} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="padding">Padding</Label>
-                                    <Input id="padding" type="number" value={options.padding as number} min={0} max={50} onChange={e => handleOptionChange('padding', Number(e.target.value))} />
                                 </div>
                             </AccordionContent>
                         </AccordionItem>
