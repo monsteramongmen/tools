@@ -84,8 +84,8 @@ export default function ImageCompareSlider({ original, compressed, className }: 
             </div>
         </div>
          <div className="flex justify-between mt-2 text-sm text-muted-foreground">
-            <span>Original</span>
             <span>Compressed</span>
+            <span>Original</span>
         </div>
     </div>
   );
