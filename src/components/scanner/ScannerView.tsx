@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { BrowserMultiFormatReader, NotFoundException, Result } from '@zxing/browser';
+import { BrowserMultiFormatReader, Result } from '@zxing/browser';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -65,7 +65,7 @@ export default function ScannerView() {
           stopScan();
           playBeep();
         }
-        if (err && !(err instanceof NotFoundException)) {
+        if (err && err.name !== 'NotFoundException') {
           console.error(err);
           setError(`An error occurred while scanning: ${err.message}`);
           stopScan();
@@ -111,10 +111,10 @@ export default function ScannerView() {
       const result = await codeReader.current.decodeFromImage(undefined, src);
       setScanResult(result);
       playBeep();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       let message = "Could not decode the barcode from the image.";
-      if (err instanceof NotFoundException) {
+      if (err.name === 'NotFoundException') {
         message = "No barcode was found in the image. Please try a clearer image."
       } else if (err instanceof DOMException && err.name === 'NotSupportedError') {
           message = "Image format not supported by the browser."
@@ -302,3 +302,5 @@ export default function ScannerView() {
     </Card>
   );
 }
+
+    
