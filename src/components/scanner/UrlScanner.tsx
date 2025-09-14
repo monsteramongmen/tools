@@ -22,19 +22,33 @@ export default function UrlScanner({ onScanSuccess }: UrlScannerProps) {
         setError(null);
         setIsLoading(true);
 
-        try {
-            // Using a CORS proxy to prevent cross-origin issues
-            const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
-            const result = await codeReader.current.decodeFromImage(undefined, proxyUrl);
-            onScanSuccess(result);
-        } catch (err) {
-            console.error(err);
-            const message = "Could not find a barcode in the image at the provided URL. Please check the link or try a different image.";
+        const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
+        
+        const img = new Image();
+        img.crossOrigin = "anonymous"; // Important for using a proxy
+
+        img.onload = async () => {
+            try {
+                const result = await codeReader.current.decodeFromImageElement(img);
+                onScanSuccess(result);
+            } catch (err) {
+                console.error(err);
+                const message = "Could not find a barcode in the image. The image might be unclear or the barcode format is not supported.";
+                setError(message);
+                toast({ variant: 'destructive', title: 'Decoding Error', description: message });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        img.onerror = () => {
+            const message = "Failed to load the image from the provided URL. Please check the link and ensure it's a valid, public image.";
             setError(message);
-            toast({ variant: 'destructive', title: 'Decoding Error', description: message });
-        } finally {
+            toast({ variant: 'destructive', title: 'Image Load Error', description: message });
             setIsLoading(false);
-        }
+        };
+        
+        img.src = proxyUrl;
     };
 
     const handleUrlSubmit = (event: React.FormEvent) => {
@@ -50,7 +64,7 @@ export default function UrlScanner({ onScanSuccess }: UrlScannerProps) {
             <h3 className="text-lg font-medium">Scan from Image URL</h3>
             <p className="mt-1 text-sm text-muted-foreground">Enter the web address of an image to scan.</p>
             <Input
-                type="text"
+                type="url"
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
                 placeholder="https://example.com/barcode.png"
