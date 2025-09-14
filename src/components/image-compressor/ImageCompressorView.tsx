@@ -8,9 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { UploadCloud, Loader2, Download, PackageCheck, Image as ImageIcon, Check, RefreshCw } from 'lucide-react';
+import { UploadCloud, Loader2, Download, PackageCheck, RefreshCw, Check } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '../ui/checkbox';
 
@@ -26,6 +25,7 @@ interface CompressionResult {
 export default function ImageCompressorView() {
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [inputKey, setInputKey] = useState(Date.now());
     
     const [originalFiles, setOriginalFiles] = useState<File[]>([]);
     const [results, setResults] = useState<CompressionResult[]>([]);
@@ -143,9 +143,7 @@ export default function ImageCompressorView() {
         setOriginalFiles([]);
         setResults([]);
         setIsLoading(false);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
+        setInputKey(Date.now());
     }
 
     return (
@@ -187,6 +185,7 @@ export default function ImageCompressorView() {
                             <p className="mt-1 text-sm text-muted-foreground">You can select multiple files at once.</p>
                             <Button className="mt-4" onClick={() => fileInputRef.current?.click()}>Browse Files</Button>
                             <input
+                                key={inputKey}
                                 type="file"
                                 ref={fileInputRef}
                                 onChange={handleFileChange}
