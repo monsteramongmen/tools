@@ -342,7 +342,7 @@ export default function BarcodeGeneratorView() {
                                     <Input id="text" value={options.text as string} onChange={e => handleOptionChange('text', e.target.value)} />
                                 </div>
                                 <Button type="submit" className="w-full">
-                                    <Wand2 className="mr-2" /> Generate Single Barcode
+                                    <Wand2 className="mr-2" /> Generate Single
                                 </Button>
                             </form>
                         </TabsContent>
