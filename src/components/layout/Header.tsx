@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Cpu, Menu, ChevronDown, View, Camera, Box, QrCode, Wand2, Crop, Minimize, Barcode } from "lucide-react";
+import { Cpu, Menu, ChevronDown, View, Camera, Box, QrCode, Wand2, Crop, Minimize, Barcode, ScanLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./ThemeToggle";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -24,6 +24,7 @@ const toolsNavLinks = [
   { href: "/model-viewer", label: "Model Viewer", icon: Box },
   { href: "/qr-generator", label: "QR Generator", icon: QrCode },
   { href: "/barcode-generator", label: "Barcode Generator", icon: Barcode },
+  { href: "/scanner", label: "Scanner", icon: ScanLine },
   { href: "/image-generator", label: "AI Image Generator", icon: Wand2 },
   { href: "/image-cropper", label: "Image Cropper", icon: Crop },
   { href: "/image-compressor", label: "Image Compressor", icon: Minimize },
