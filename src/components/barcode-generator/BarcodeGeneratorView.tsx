@@ -303,10 +303,12 @@ export default function BarcodeGeneratorView() {
                     <CardHeader>
                         <CardTitle>Barcode Preview</CardTitle>
                     </CardHeader>
-                    <CardContent className="flex flex-col items-center justify-center min-h-[250px] bg-muted rounded-lg p-4 overflow-auto">
-                        <canvas ref={canvasRef} />
+                    <CardContent className="flex flex-col items-center justify-center min-h-[250px] bg-muted rounded-lg p-4">
+                        <div className="overflow-auto w-full flex justify-center">
+                            <canvas ref={canvasRef} />
+                        </div>
                          {error && (
-                            <div className="text-destructive text-center p-4 rounded-md bg-destructive/10 flex flex-col items-center gap-2">
+                            <div className="text-destructive text-center p-4 rounded-md bg-destructive/10 flex flex-col items-center gap-2 mt-4">
                                 <AlertCircle className="w-8 h-8" />
                                 <p className="font-semibold">Generation Error</p>
                                 <p className="text-sm">{error}</p>
@@ -347,5 +349,3 @@ export default function BarcodeGeneratorView() {
         </div>
     );
 }
-
-    
