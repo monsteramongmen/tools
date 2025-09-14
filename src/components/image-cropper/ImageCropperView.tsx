@@ -42,7 +42,8 @@ async function getCroppedImg(
   crop: PixelCrop,
   fileName: string,
   rotation = 0,
-  flip = { horizontal: false, vertical: false }
+  flip = { horizontal: false, vertical: false },
+  shape: 'rect' | 'circle' = 'rect'
 ): Promise<{ file: File, dataUrl: string }> {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -66,6 +67,12 @@ async function getCroppedImg(
   if (flip.horizontal) ctx.scale(-1, 1);
   if (flip.vertical) ctx.scale(1, -1);
   ctx.translate(-realCropWidth / 2, -realCropHeight / 2);
+
+  if (shape === 'circle') {
+    ctx.beginPath();
+    ctx.arc(realCropWidth / 2, realCropHeight / 2, Math.min(realCropWidth, realCropHeight) / 2, 0, 2 * Math.PI);
+    ctx.clip();
+  }
 
   ctx.drawImage(
     image,
@@ -162,6 +169,7 @@ export default function ImageCropperView() {
         `cropped-image-${Date.now()}.png`,
         rotation,
         flip,
+        cropShape
       );
       setPreviewUrl(dataUrl);
     } catch (e) {
@@ -191,7 +199,8 @@ export default function ImageCropperView() {
         completedCrop,
         `cropped-image-${Date.now()}.png`,
         rotation,
-        flip
+        flip,
+        cropShape
       );
       const url = URL.createObjectURL(file);
       const a = document.createElement("a");
