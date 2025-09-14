@@ -84,16 +84,7 @@ export default function BarcodeGeneratorView() {
     };
     
     const handleReset = () => {
-        const canvas = canvasRef.current;
-        setOptions(defaultOptions);
-        setError(null);
-        setHasGenerated(false);
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            ctx?.clearRect(0, 0, canvas.width, canvas.height);
-            canvas.width = 0;
-            canvas.height = 0;
-        }
+        window.location.reload();
     }
 
     const downloadBarcode = () => {
