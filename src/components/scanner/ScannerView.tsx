@@ -49,6 +49,7 @@ export default function ScannerView() {
   }, [getDevices]);
 
  const stopScan = useCallback(() => {
+    // Stop video stream
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach(track => track.stop());
@@ -56,7 +57,11 @@ export default function ScannerView() {
     }
     // Defensive check to prevent runtime errors
     if (codeReader.current && typeof codeReader.current.reset === 'function') {
-        codeReader.current.reset();
+        try {
+            codeReader.current.reset();
+        } catch (e) {
+            console.error("Error calling codeReader.reset(), may already be reset.", e)
+        }
     }
     setIsScanning(false);
     setIsLoading(false);
@@ -68,7 +73,6 @@ export default function ScannerView() {
       return;
     }
     
-    // Ensure we have a fresh reader instance if it was somehow lost
     if (!codeReader.current) {
         codeReader.current = new BrowserMultiFormatReader();
     }
@@ -82,11 +86,11 @@ export default function ScannerView() {
       if (videoRef.current) {
         const result = await codeReader.current.decodeOnceFromVideoDevice(selectedDeviceId, videoRef.current);
         setScanResult(result);
-        playBeep();
+        stopScan(); // Stop after one successful scan
       }
     } catch (err: any) {
       if (err.name === 'NotFoundException') {
-        setError('No barcode found. Please try again.');
+        setError('No barcode found. Please adjust camera and try again.');
       } else {
         let message = "Could not start the scanner.";
         if (err.name === 'NotAllowedError') {
@@ -99,10 +103,7 @@ export default function ScannerView() {
         setError(message);
         toast({ variant: 'destructive', title: 'Scanner Error', description: message });
       }
-    } finally {
-        setIsLoading(false);
-        setIsScanning(false);
-        stopScan(); // Ensure camera is always stopped after an attempt
+      stopScan(); // Ensure camera is always stopped after an attempt
     }
   }, [selectedDeviceId, toast, stopScan]);
   
@@ -166,6 +167,7 @@ export default function ScannerView() {
   }
 
   useEffect(() => {
+    // Cleanup on component unmount
     return () => {
       stopScan();
     }
@@ -180,27 +182,6 @@ export default function ScannerView() {
     }
   }
   
-  const playBeep = () => {
-    try {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        if (!audioContext) return;
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        gainNode.gain.value = 0.1; // Lower volume
-        oscillator.frequency.value = 880; // A5 note
-        oscillator.type = 'sine';
-        
-        oscillator.start();
-        setTimeout(() => oscillator.stop(), 150);
-    } catch (e) {
-        console.warn("Could not play beep sound.", e);
-    }
-  }
-
   return (
     <Card>
       <CardContent className="pt-6">
@@ -215,7 +196,7 @@ export default function ScannerView() {
                   <div className="relative w-full bg-muted rounded-lg overflow-hidden aspect-video flex items-center justify-center">
                       <video ref={videoRef} className={`w-full h-full object-cover ${isScanning ? '' : 'hidden'}`} autoPlay playsInline muted />
                        <div className={`absolute inset-0 flex flex-col items-center justify-center text-center text-muted-foreground p-4 ${isScanning ? 'hidden' : 'flex'}`}>
-                          {isLoading ? (
+                          {isLoading && !isScanning ? ( // Show only when starting up
                               <div className="flex flex-col items-center gap-2">
                                   <Loader2 className="w-8 h-8 animate-spin" />
                                   <p>Starting camera...</p>
@@ -267,7 +248,13 @@ export default function ScannerView() {
                       <Upload className="w-12 h-12 text-muted-foreground" />
                       <h3 className="mt-4 text-lg font-medium">Upload an Image</h3>
                       <p className="mt-1 text-sm text-muted-foreground">Select an image file containing a barcode.</p>
-                      <Input type="file" accept="image/*" onChange={handleFileChange} className="mt-4 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 w-full max-w-sm"/>
+                      <Input type="file" accept="image/*" onChange={handleFileChange} disabled={isLoading} className="mt-4 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 w-full max-w-sm"/>
+                      {isLoading && (
+                        <div className="flex items-center gap-2 mt-4 text-muted-foreground">
+                            <Loader2 className="animate-spin" />
+                            <p>Processing image...</p>
+                        </div>
+                      )}
                   </div>
               </TabsContent>
               <TabsContent value="url" className="mt-6">
@@ -278,6 +265,7 @@ export default function ScannerView() {
                           onChange={(e) => setImageUrl(e.target.value)}
                           placeholder="Enter image URL"
                           className="w-full max-w-lg"
+                          disabled={isLoading}
                       />
                       <Button type="submit" disabled={isLoading || !imageUrl}>
                           {isLoading ? <Loader2 className="animate-spin mr-2"/> : <LinkIcon className="mr-2" />} 
@@ -313,7 +301,7 @@ export default function ScannerView() {
             </Card>
         )}
         
-        {!scanResult && error && !isLoading && !isScanning && (
+        {!scanResult && error && !isLoading && (
              <Card className="mt-8">
                 <CardHeader>
                     <CardTitle>Error</CardTitle>
