@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, View, Box, QrCode, Wand2, Crop } from "lucide-react";
+import { Camera, View, Box, QrCode, Wand2, Crop, Minimize } from "lucide-react";
 
 export default function Home() {
   return (
@@ -112,6 +112,23 @@ export default function Home() {
           <CardContent className="text-center">
             <Button asChild>
               <Link href="/image-cropper">Open Cropper</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow duration-300">
+          <CardHeader className="items-center text-center">
+            <div className="p-4 bg-primary/10 rounded-full mb-4">
+              <Minimize className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">Image Compressor</CardTitle>
+            <CardDescription>
+              Compress and optimize your images with fine-grained control.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button asChild>
+              <Link href="/image-compressor">Open Compressor</Link>
             </Button>
           </CardContent>
         </Card>
