@@ -260,6 +260,7 @@ export default function ImageCropperView() {
                   ref={imgRef}
                   alt="Crop preview"
                   src={imgSrc}
+                  crossOrigin="anonymous"
                   style={{ 
                       transform: `scale(${scale}) scaleX(${flip.horizontal}) scaleY(${flip.vertical}) rotate(${rotation}deg)`,
                       maxHeight: '70vh'
