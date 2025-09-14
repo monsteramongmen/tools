@@ -16,7 +16,7 @@ type ScanMode = "camera" | "file" | "url";
 export default function ScannerView() {
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const codeReader = useRef<BrowserMultiFormatReader | null>(null);
+  const codeReader = useRef(new BrowserMultiFormatReader());
   
   const [scanResult, setScanResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -28,13 +28,6 @@ export default function ScannerView() {
   
   const [mode, setMode] = useState<ScanMode>("camera");
   const [imageUrl, setImageUrl] = useState('');
-
-  // Initialize codeReader ref
-  useEffect(() => {
-    if (!codeReader.current) {
-        codeReader.current = new BrowserMultiFormatReader();
-    }
-  }, []);
 
   const getDevices = useCallback(async () => {
     try {
@@ -55,8 +48,13 @@ export default function ScannerView() {
     getDevices();
   }, [getDevices]);
 
-  const stopScan = useCallback(() => {
-    if (codeReader.current && typeof codeReader.current.reset === 'function') {
+ const stopScan = useCallback(() => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    if (codeReader.current) {
         codeReader.current.reset();
     }
     setIsScanning(false);
@@ -77,34 +75,36 @@ export default function ScannerView() {
 
     try {
       if (videoRef.current) {
-        await codeReader.current.decodeFromVideoDevice(selectedDeviceId, videoRef.current, (result, err) => {
-          if (result) {
-            setScanResult(result);
-            stopScan();
-            playBeep();
-          }
-          if (err && err.name !== 'NotFoundException') {
-            console.error(err);
-            // Don't set a hard error for continuous scanning, just log it.
-          }
-        });
+        const result = await codeReader.current.decodeOnceFromVideoDevice(selectedDeviceId, videoRef.current);
+        setScanResult(result);
+        playBeep();
       }
-      setIsLoading(false);
     } catch (err: any) {
-      let message = "Could not start the scanner.";
-       if (err.name === 'NotAllowedError') {
-          message = "Camera access was denied. Please allow camera access in your browser settings.";
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-          message = "No camera was found on this device.";
-      } else if (err.name === 'NotReadableError') {
-          message = "The camera is already in use by another application.";
+      if (err.name === 'NotFoundException') {
+        setError('No barcode found. Please try again.');
+      } else {
+        let message = "Could not start the scanner.";
+        if (err.name === 'NotAllowedError') {
+            message = "Camera access was denied. Please allow camera access in your browser settings.";
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+            message = "No camera was found on this device.";
+        } else if (err.name === 'NotReadableError') {
+            message = "The camera is already in use by another application.";
+        }
+        setError(message);
+        toast({ variant: 'destructive', title: 'Scanner Error', description: message });
       }
-      setError(message);
-      toast({ variant: 'destructive', title: 'Scanner Error', description: message });
-      setIsLoading(false);
-      setIsScanning(false);
+    } finally {
+        setIsLoading(false);
+        setIsScanning(false);
+        // Ensure camera is off after scan attempt
+        if (videoRef.current && videoRef.current.srcObject) {
+          const stream = videoRef.current.srcObject as MediaStream;
+          stream.getTracks().forEach(track => track.stop());
+          videoRef.current.srcObject = null;
+        }
     }
-  }, [selectedDeviceId, toast, stopScan]);
+  }, [selectedDeviceId, toast]);
   
   const decodeFromImage = async (source: string | File) => {
     setError(null);
@@ -128,7 +128,6 @@ export default function ScannerView() {
 
       const result = await codeReader.current.decodeFromImage(undefined, src);
       setScanResult(result);
-      playBeep();
     } catch (err: any) {
       console.error(err);
       let message = "Could not decode the barcode from the image.";
@@ -216,7 +215,7 @@ export default function ScannerView() {
               </TabsList>
               <TabsContent value="camera" className="mt-6">
                   <div className="relative w-full bg-muted rounded-lg overflow-hidden aspect-video flex items-center justify-center">
-                      <video ref={videoRef} className={`w-full h-full object-cover ${isScanning ? '' : 'hidden'}`} />
+                      <video ref={videoRef} className={`w-full h-full object-cover ${isScanning ? '' : 'hidden'}`} autoPlay playsInline muted />
                        <div className={`absolute inset-0 flex flex-col items-center justify-center text-center text-muted-foreground p-4 ${isScanning ? 'hidden' : 'flex'}`}>
                           {isLoading ? (
                               <div className="flex flex-col items-center gap-2">
@@ -238,7 +237,7 @@ export default function ScannerView() {
                       {isScanning && <div className="absolute top-1/2 left-0 w-full h-0.5 bg-red-500 animate-ping"></div>}
                   </div>
                    <div className="flex flex-wrap gap-4 justify-center mt-6">
-                      {!isScanning && !scanResult ? (
+                      {!isScanning && !scanResult && !isLoading ? (
                           <>
                                {devices.length > 0 && (
                                   <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
@@ -258,7 +257,7 @@ export default function ScannerView() {
                                   <Camera className="mr-2" /> Start Scan
                               </Button>
                           </>
-                      ) : ( isScanning &&
+                      ) : ( (isScanning || isLoading) &&
                           <Button variant="destructive" onClick={stopScan}>
                               <VideoOff className="mr-2" /> Stop Scan
                           </Button>
@@ -335,5 +334,3 @@ export default function ScannerView() {
     </Card>
   );
 }
-
-    
