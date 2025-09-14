@@ -15,7 +15,7 @@ import { Download, Share2, Palette, Text, Minimize, Settings, AlertCircle } from
 const supportedBarcodeTypes = [
     'code128', 'ean13', 'ean8', 'upca', 'upce', 'isbn', 'gs1-128', 'qrcode',
     'pdf417', 'datamatrix', 'azteccode', 'pharmacode', 'postnet', 'planet',
-    'industrial2of5', 'interleaved2of5', 'itf14', 'telepen'
+    'industrial2of5', 'interleaved2of5', 'itf14', 'telepen', 'code39', 'codabar'
 ];
 
 const fontOptions = ['Helvetica', 'Arial', 'Courier', 'Times'];
@@ -28,6 +28,8 @@ export default function BarcodeGeneratorView() {
         bcid: 'code128',
         text: '1234567890',
         scale: 3,
+        scaleX: undefined,
+        scaleY: undefined,
         height: 10,
         includetext: true,
         textxalign: 'center',
@@ -132,7 +134,7 @@ export default function BarcodeGeneratorView() {
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="text">Text to Encode</Label>
-                        <Input id="text" value={options.text} onChange={e => handleOptionChange('text', e.target.value)} />
+                        <Input id="text" value={options.text as string} onChange={e => handleOptionChange('text', e.target.value)} />
                     </div>
 
                     <Accordion type="single" collapsible className="w-full">
@@ -168,7 +170,7 @@ export default function BarcodeGeneratorView() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="padding">Padding</Label>
-                                    <Input id="padding" type="number" value={options.padding} min={0} max={50} onChange={e => handleOptionChange('padding', Number(e.target.value))} />
+                                    <Input id="padding" type="number" value={options.padding as number} min={0} max={50} onChange={e => handleOptionChange('padding', Number(e.target.value))} />
                                 </div>
                             </AccordionContent>
                         </AccordionItem>
@@ -181,11 +183,11 @@ export default function BarcodeGeneratorView() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="textsize">Text Size</Label>
-                                    <Input id="textsize" type="number" value={options.textsize} min={5} max={30} onChange={e => handleOptionChange('textsize', Number(e.target.value))} />
+                                    <Input id="textsize" type="number" value={options.textsize as number} min={5} max={30} onChange={e => handleOptionChange('textsize', Number(e.target.value))} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="textfont">Text Font</Label>
-                                    <Select value={options.textfont} onValueChange={(v) => handleOptionChange('textfont', v)}>
+                                    <Select value={options.textfont as string} onValueChange={(v) => handleOptionChange('textfont', v)}>
                                         <SelectTrigger id="textfont"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             {fontOptions.map(font => <SelectItem key={font} value={font}>{font}</SelectItem>)}
@@ -194,7 +196,7 @@ export default function BarcodeGeneratorView() {
                                 </div>
                                  <div className="space-y-2">
                                     <Label htmlFor="textxalign">Text Horizontal Align</Label>
-                                    <Select value={options.textxalign} onValueChange={(v) => handleOptionChange('textxalign', v)}>
+                                    <Select value={options.textxalign as string} onValueChange={(v) => handleOptionChange('textxalign', v)}>
                                         <SelectTrigger id="textxalign"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="center">Center</SelectItem>
@@ -205,7 +207,7 @@ export default function BarcodeGeneratorView() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="textyalign">Text Vertical Align</Label>
-                                    <Select value={options.textyalign} onValueChange={(v) => handleOptionChange('textyalign', v)}>
+                                    <Select value={options.textyalign as string} onValueChange={(v) => handleOptionChange('textyalign', v)}>
                                         <SelectTrigger id="textyalign"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="below">Below</SelectItem>
@@ -220,7 +222,7 @@ export default function BarcodeGeneratorView() {
                             <AccordionContent className="space-y-4 pt-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="rotate">Rotation</Label>
-                                    <Select value={options.rotate} onValueChange={(v) => handleOptionChange('rotate', v)}>
+                                    <Select value={options.rotate as string} onValueChange={(v) => handleOptionChange('rotate', v)}>
                                         <SelectTrigger id="rotate"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="N">Normal (0°)</SelectItem>
@@ -232,7 +234,7 @@ export default function BarcodeGeneratorView() {
                                 </div>
                                  <div className="space-y-2">
                                     <Label htmlFor="addon">EAN/UPC Addon</Label>
-                                    <Input id="addon" value={options.addon} onChange={e => handleOptionChange('addon', e.target.value)} placeholder="2 or 5 digit addon"/>
+                                    <Input id="addon" value={options.addon as string} onChange={e => handleOptionChange('addon', e.target.value)} placeholder="2 or 5 digit addon"/>
                                     <p className="text-xs text-muted-foreground">Only for EAN/UPC barcodes. Enter 2 or 5 digits.</p>
                                 </div>
                             </AccordionContent>
