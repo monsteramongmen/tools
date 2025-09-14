@@ -56,15 +56,17 @@ export default function BarcodeGeneratorView() {
     const handleGenerate = () => {
         const canvas = canvasRef.current;
         if (canvas) {
+            // **Fix:** Explicitly clear canvas before re-drawing
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                canvas.width = 0;
+                canvas.height = 0;
+            }
+
             try {
-                // bwip-js treats `text` as required.
                 if (!options.text) {
                     setError("Text to encode cannot be empty.");
-                    // Clear the canvas
-                    const ctx = canvas.getContext('2d');
-                    ctx?.clearRect(0, 0, canvas.width, canvas.height);
-                    canvas.width = 0; // Collapse canvas
-                    canvas.height = 0;
                     setHasGenerated(false);
                     return;
                 }
