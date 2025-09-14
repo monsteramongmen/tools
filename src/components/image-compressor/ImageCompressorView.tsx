@@ -9,9 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
-import { UploadCloud, Loader2, Download, PackageCheck, RefreshCw, Check } from 'lucide-react';
+import { UploadCloud, Loader2, Download, PackageCheck, RefreshCw, Check, ZoomIn } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '../ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import ImageCompareSlider from './ImageCompareSlider';
 
 interface CompressionResult {
     id: string;
@@ -37,10 +40,19 @@ export default function ImageCompressorView() {
     const [useWebWorker, setUseWebWorker] = useState(true);
     const [initialQuality, setInitialQuality] = useState(0.7);
     const [alwaysKeepResolution, setAlwaysKeepResolution] = useState(false);
+    const [outputFileType, setOutputFileType] = useState<string | undefined>(undefined);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            setOriginalFiles(Array.from(e.target.files));
+            const validFiles = Array.from(e.target.files).filter(file => file.type.startsWith('image/'));
+            if(validFiles.length !== e.target.files.length) {
+                 toast({
+                    variant: 'destructive',
+                    title: 'Invalid File Type',
+                    description: 'One or more selected files were not images and have been ignored.',
+                });
+            }
+            setOriginalFiles(validFiles);
             setResults([]);
         }
     };
@@ -73,6 +85,10 @@ export default function ImageCompressorView() {
             useWebWorker,
             initialQuality,
             alwaysKeepResolution,
+            fileType: outputFileType,
+            // ExifOrientation: -1 is now default, so explicit handling might not be needed
+            // but let's be safe.
+            exifOrientation: -1,
         };
 
         try {
@@ -111,10 +127,22 @@ export default function ImageCompressorView() {
         }
     };
     
-    const downloadFile = (file: File) => {
+    const getFileExtension = (fileType: string | undefined, originalMime: string): string => {
+        if (fileType) {
+            return `.${fileType.split('/')[1]}`;
+        }
+        const extension = originalMime.split('/')[1];
+        return `.${extension}`;
+    }
+
+    const downloadFile = (result: CompressionResult) => {
+        const file = result.compressedFile;
+        const extension = getFileExtension(outputFileType, result.originalFile.type);
+        const originalName = result.originalFile.name.substring(0, result.originalFile.name.lastIndexOf('.'));
+
         const a = document.createElement('a');
         a.href = URL.createObjectURL(file);
-        a.download = `compressed-${file.name}`;
+        a.download = `compressed-${originalName}${extension}`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -126,7 +154,9 @@ export default function ImageCompressorView() {
 
         const zip = new JSZip();
         results.forEach(result => {
-            zip.file(`compressed-${result.compressedFile.name}`, result.compressedFile);
+            const extension = getFileExtension(outputFileType, result.originalFile.type);
+            const originalName = result.originalFile.name.substring(0, result.originalFile.name.lastIndexOf('.'));
+            zip.file(`compressed-${originalName}${extension}`, result.compressedFile);
         });
 
         const content = await zip.generateAsync({ type: 'blob' });
@@ -143,9 +173,6 @@ export default function ImageCompressorView() {
         setOriginalFiles([]);
         setResults([]);
         setIsLoading(false);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-        }
         setInputKey(Date.now());
     }
 
@@ -167,6 +194,19 @@ export default function ImageCompressorView() {
                     <div className="space-y-3">
                         <Label>Quality: {Math.round(initialQuality * 100)}%</Label>
                         <Slider value={[initialQuality]} onValueChange={([val]) => setInitialQuality(val)} max={1} step={0.05} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="outputFileType">Convert To (Optional)</Label>
+                        <Select onValueChange={setOutputFileType} value={outputFileType}>
+                            <SelectTrigger id="outputFileType">
+                                <SelectValue placeholder="Keep Original Format" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="image/jpeg">JPEG</SelectItem>
+                                <SelectItem value="image/png">PNG</SelectItem>
+                                <SelectItem value="image/webp">WEBP</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="flex items-center space-x-2">
                         <Checkbox id="useWebWorker" checked={useWebWorker} onCheckedChange={checked => setUseWebWorker(Boolean(checked))} />
@@ -192,7 +232,7 @@ export default function ImageCompressorView() {
                                 type="file"
                                 ref={fileInputRef}
                                 onChange={handleFileChange}
-                                accept="image/jpeg,image/png,image/webp"
+                                accept="image/jpeg,image/png,image/webp,image/gif,image/bmp"
                                 multiple
                                 className="hidden"
                             />
@@ -201,7 +241,7 @@ export default function ImageCompressorView() {
                         {(originalFiles.length > 0) && (
                             <div className="mt-6">
                                 <h4 className="font-semibold mb-2">Selected Files:</h4>
-                                <ul className="text-sm text-muted-foreground list-disc pl-5">
+                                <ul className="text-sm text-muted-foreground list-disc pl-5 max-h-24 overflow-y-auto">
                                     {originalFiles.map(f => <li key={f.name}>{f.name} ({formatBytes(f.size)})</li>)}
                                 </ul>
                                 <div className="mt-6 flex flex-wrap gap-4">
@@ -243,27 +283,41 @@ export default function ImageCompressorView() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Original</TableHead>
-                                        <TableHead>Compressed</TableHead>
-                                        <TableHead className="text-right">Details</TableHead>
-                                        <TableHead className="text-right">Action</TableHead>
+                                        <TableHead>Preview</TableHead>
+                                        <TableHead>Details</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {results.map(r => (
                                         <TableRow key={r.id}>
+                                            <TableCell className="font-medium">
+                                                <Dialog>
+                                                    <DialogTrigger asChild>
+                                                        <div className="relative group cursor-pointer">
+                                                            <img src={r.compressedUrl} alt="Compressed" className="w-24 h-24 object-cover rounded-md" />
+                                                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
+                                                                <ZoomIn className="w-8 h-8 text-white" />
+                                                            </div>
+                                                        </div>
+                                                    </DialogTrigger>
+                                                    <DialogContent className="max-w-4xl">
+                                                        <DialogHeader>
+                                                            <DialogTitle>Image Comparison</DialogTitle>
+                                                        </DialogHeader>
+                                                        <div className="my-4">
+                                                           <ImageCompareSlider original={r.originalUrl} compressed={r.compressedUrl} />
+                                                        </div>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            </TableCell>
                                             <TableCell>
-                                                <img src={r.originalUrl} alt="Original" className="w-24 h-24 object-cover rounded-md" />
-                                            </TableCell>
-                                             <TableCell>
-                                                <img src={r.compressedUrl} alt="Compressed" className="w-24 h-24 object-cover rounded-md" />
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <p className="font-medium">{formatBytes(r.originalFile.size)} → {formatBytes(r.compressedFile.size)}</p>
+                                                <p className="font-medium">{r.originalFile.name}</p>
+                                                <p className="text-sm text-muted-foreground">{formatBytes(r.originalFile.size)} → {formatBytes(r.compressedFile.size)}</p>
                                                 <p className="text-sm text-green-600 dark:text-green-400 font-bold">{r.reduction.toFixed(2)}% reduction</p>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Button variant="outline" size="sm" onClick={() => downloadFile(r.compressedFile)}>
+                                                <Button variant="outline" size="sm" onClick={() => downloadFile(r)}>
                                                     <Download className="mr-2 h-4 w-4" /> Download
                                                 </Button>
                                             </TableCell>
