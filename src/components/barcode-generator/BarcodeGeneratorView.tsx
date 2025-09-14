@@ -194,7 +194,7 @@ export default function BarcodeGeneratorView() {
                                     <Input id="scale" type="number" value={options.scale} min={1} max={10} onChange={e => handleOptionChange('scale', Number(e.target.value))} />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="height">Height (mm)</Label>
+                                    <Label htmlFor="height">Height (px)</Label>
                                     <Input id="height" type="number" value={options.height} min={1} max={50} onChange={e => handleOptionChange('height', Number(e.target.value))} />
                                 </div>
                                 <div className="space-y-2">
