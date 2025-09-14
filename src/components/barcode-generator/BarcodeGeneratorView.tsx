@@ -72,7 +72,7 @@ export default function BarcodeGeneratorView() {
     const generateSingle = (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
-        setHasGenerated(false);
+        
         const canvas = canvasRef.current;
         if (canvas) {
             const ctx = canvas.getContext('2d');
@@ -85,6 +85,7 @@ export default function BarcodeGeneratorView() {
             try {
                 if (!options.text) {
                     setError("Text to encode cannot be empty.");
+                    setHasGenerated(false);
                     return;
                 }
                 
@@ -102,6 +103,7 @@ export default function BarcodeGeneratorView() {
                 console.error('Barcode generation error:', e);
                 const friendlyMessage = e.message || 'Invalid options for the selected barcode type.';
                 setError(friendlyMessage);
+                setHasGenerated(false);
             }
         }
     }
@@ -158,6 +160,7 @@ export default function BarcodeGeneratorView() {
         } catch (err: any) {
             const errorMessage = err.message || 'An unknown error occurred.';
             setError(`Failed to process JSON. ${errorMessage}`);
+            setHasGenerated(false);
             toast({
                 variant: 'destructive',
                 title: 'Bulk Generation Error',
