@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
-import bwipjs, { ToCanvasOptions } from 'bwip-js';
+import { useState, useRef } from 'react';
+import bwipjs, { ToCanvasOptions, ToSvgOptions } from 'bwip-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Share2, Palette, Text, Minimize, Settings, AlertCircle } from 'lucide-react';
+import { Download, Share2, Palette, Text, Minimize, Settings, AlertCircle, Wand2 } from 'lucide-react';
 
 const supportedBarcodeTypes = [
     'code128', 'ean13', 'ean8', 'upca', 'upce', 'isbn', 'gs1-128', 'qrcode',
@@ -19,6 +19,8 @@ const supportedBarcodeTypes = [
 ];
 
 const fontOptions = ['Helvetica', 'Arial', 'Courier', 'Times'];
+
+type DownloadFormat = 'png' | 'svg';
 
 export default function BarcodeGeneratorView() {
     const { toast } = useToast();
@@ -44,12 +46,14 @@ export default function BarcodeGeneratorView() {
     });
     
     const [error, setError] = useState<string | null>(null);
+    const [hasGenerated, setHasGenerated] = useState(false);
+    const [downloadFormat, setDownloadFormat] = useState<DownloadFormat>('png');
 
     const handleOptionChange = (key: keyof ToCanvasOptions, value: any) => {
         setOptions(prev => ({ ...prev, [key]: value }));
     };
 
-    useEffect(() => {
+    const handleGenerate = () => {
         const canvas = canvasRef.current;
         if (canvas) {
             try {
@@ -59,38 +63,63 @@ export default function BarcodeGeneratorView() {
                     // Clear the canvas
                     const ctx = canvas.getContext('2d');
                     ctx?.clearRect(0, 0, canvas.width, canvas.height);
+                    setHasGenerated(false);
                     return;
                 }
 
                 bwipjs.toCanvas(canvas, options);
                 setError(null);
+                setHasGenerated(true);
             } catch (e: any) {
                 console.error('Barcode generation error:', e);
                 const friendlyMessage = e.message || 'Invalid options for the selected barcode type.';
                 setError(friendlyMessage);
+                setHasGenerated(false);
             }
         }
-    }, [options]);
+    };
 
     const downloadBarcode = () => {
-        const canvas = canvasRef.current;
-        if (canvas && !error) {
-            const a = document.createElement('a');
-            a.href = canvas.toDataURL('image/png');
-            a.download = `${options.bcid}-${options.text}.png`;
-            a.click();
-        } else {
-            toast({
+        if (!hasGenerated || error) {
+             toast({
                 variant: 'destructive',
                 title: 'Cannot Download',
                 description: error || 'Please generate a valid barcode first.'
             });
+            return;
+        }
+
+        if (downloadFormat === 'png') {
+            const canvas = canvasRef.current;
+            if (canvas) {
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL('image/png');
+                a.download = `${options.bcid}-${options.text}.png`;
+                a.click();
+            }
+        } else if (downloadFormat === 'svg') {
+            try {
+                const svgString = bwipjs.toSVG(options as ToSvgOptions);
+                const blob = new Blob([svgString], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${options.bcid}-${options.text}.svg`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (e: any) {
+                 toast({
+                    variant: 'destructive',
+                    title: 'SVG Generation Error',
+                    description: e.message || 'Could not generate SVG.'
+                });
+            }
         }
     };
     
     const shareBarcode = async () => {
         const canvas = canvasRef.current;
-        if (canvas && !error && navigator.share) {
+        if (canvas && hasGenerated && !error && navigator.share) {
             canvas.toBlob(async (blob) => {
                 if (blob) {
                     const file = new File([blob], `${options.bcid}-${options.text}.png`, { type: 'image/png' });
@@ -111,7 +140,7 @@ export default function BarcodeGeneratorView() {
                 }
             }, 'image/png');
         } else {
-             toast({ title: 'Share not available', description: 'Web Share API not supported or no valid barcode.'});
+             toast({ title: 'Share not available', description: 'Web Share API not supported or no valid barcode has been generated.'});
         }
     }
 
@@ -240,6 +269,10 @@ export default function BarcodeGeneratorView() {
                             </AccordionContent>
                         </AccordionItem>
                     </Accordion>
+
+                     <Button onClick={handleGenerate} className="w-full mt-4">
+                        <Wand2 className="mr-2" /> Generate Barcode
+                    </Button>
                 </CardContent>
             </Card>
 
@@ -257,17 +290,35 @@ export default function BarcodeGeneratorView() {
                                 <p className="text-sm">{error}</p>
                             </div>
                         )}
+                        {!hasGenerated && !error && (
+                            <div className="text-muted-foreground text-center">
+                                <p>Your generated barcode will appear here.</p>
+                            </div>
+                        )}
                         
-                        <div className="flex flex-wrap gap-4 justify-center mt-6">
-                            <Button onClick={downloadBarcode} disabled={!!error}>
-                                <Download className="mr-2" /> Download
-                            </Button>
-                            {navigator.share && (
-                                <Button variant="outline" onClick={shareBarcode} disabled={!!error}>
-                                    <Share2 className="mr-2" /> Share
-                                </Button>
-                            )}
-                        </div>
+                        {hasGenerated && !error && (
+                             <div className="flex flex-wrap gap-4 justify-center mt-6">
+                                <div className="flex items-center gap-2">
+                                    <Select value={downloadFormat} onValueChange={(v: DownloadFormat) => setDownloadFormat(v)}>
+                                        <SelectTrigger className="w-[100px]">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="png">PNG</SelectItem>
+                                            <SelectItem value="svg">SVG</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <Button onClick={downloadBarcode}>
+                                        <Download className="mr-2" /> Download
+                                    </Button>
+                                </div>
+                                {navigator.share && (
+                                    <Button variant="outline" onClick={shareBarcode}>
+                                        <Share2 className="mr-2" /> Share
+                                    </Button>
+                                )}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
