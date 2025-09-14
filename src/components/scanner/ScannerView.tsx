@@ -47,6 +47,12 @@ export default function ScannerView() {
     getDevices();
   }, [getDevices]);
 
+  const stopScan = useCallback(() => {
+    codeReader.current.reset();
+    setIsScanning(false);
+    setIsLoading(false);
+  }, []);
+
   const startScan = useCallback(async () => {
     if (!selectedDeviceId) {
       toast({ variant: 'destructive', title: 'No Camera Selected', description: 'Please select a camera device.'});
@@ -59,18 +65,21 @@ export default function ScannerView() {
     setScanResult(null);
 
     try {
-      await codeReader.current.decodeFromVideoDevice(selectedDeviceId, videoRef.current, (result, err) => {
-        if (result) {
-          setScanResult(result);
-          stopScan();
-          playBeep();
-        }
-        if (err && err.name !== 'NotFoundException') {
-          console.error(err);
-          setError(`An error occurred while scanning: ${err.message}`);
-          stopScan();
-        }
-      });
+      if (videoRef.current) {
+        await codeReader.current.decodeFromVideoDevice(selectedDeviceId, videoRef.current, (result, err) => {
+          if (result) {
+            setScanResult(result);
+            stopScan();
+            playBeep();
+          }
+          if (err && err.name !== 'NotFoundException') {
+            console.error(err);
+            // Don't set a hard error for continuous scanning, just log it.
+            // setError(`An error occurred while scanning: ${err.message}`);
+            // stopScan();
+          }
+        });
+      }
       setIsLoading(false);
     } catch (err: any) {
       let message = "Could not start the scanner.";
@@ -86,13 +95,7 @@ export default function ScannerView() {
       setIsLoading(false);
       setIsScanning(false);
     }
-  }, [selectedDeviceId, toast]);
-
-  const stopScan = useCallback(() => {
-    codeReader.current.reset();
-    setIsScanning(false);
-    setIsLoading(false);
-  }, []);
+  }, [selectedDeviceId, toast, stopScan]);
   
   const decodeFromImage = async (source: string | File) => {
     setError(null);
@@ -118,8 +121,8 @@ export default function ScannerView() {
         message = "No barcode was found in the image. Please try a clearer image."
       } else if (err instanceof DOMException && err.name === 'NotSupportedError') {
           message = "Image format not supported by the browser."
-      } else if (err instanceof Error) {
-        message = err.message;
+      } else if (err.name !== 'FormatException') {
+          message = err.message;
       }
       setError(message);
       toast({ variant: 'destructive', title: 'Decoding Error', description: message });
@@ -151,8 +154,10 @@ export default function ScannerView() {
   }
 
   useEffect(() => {
-    return () => codeReader.current.reset();
-  }, []);
+    return () => {
+      stopScan();
+    }
+  }, [stopScan]);
 
   const [copied, setCopied] = useState(false);
   const copyToClipboard = () => {
@@ -164,19 +169,24 @@ export default function ScannerView() {
   }
   
   const playBeep = () => {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    gainNode.gain.value = 0.1; // Lower volume
-    oscillator.frequency.value = 880; // A5 note
-    oscillator.type = 'sine';
-    
-    oscillator.start();
-    setTimeout(() => oscillator.stop(), 150);
+    try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (!audioContext) return;
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        gainNode.gain.value = 0.1; // Lower volume
+        oscillator.frequency.value = 880; // A5 note
+        oscillator.type = 'sine';
+        
+        oscillator.start();
+        setTimeout(() => oscillator.stop(), 150);
+    } catch (e) {
+        console.warn("Could not play beep sound.", e);
+    }
   }
 
   return (
@@ -212,7 +222,7 @@ export default function ScannerView() {
                     {isScanning && <div className="absolute top-1/2 left-0 w-full h-0.5 bg-red-500 animate-ping"></div>}
                 </div>
                  <div className="flex flex-wrap gap-4 justify-center mt-6">
-                    {!isScanning ? (
+                    {!isScanning && !scanResult ? (
                         <>
                              {devices.length > 0 && (
                                 <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
@@ -232,7 +242,7 @@ export default function ScannerView() {
                                 <Camera className="mr-2" /> Start Scan
                             </Button>
                         </>
-                    ) : (
+                    ) : ( isScanning &&
                         <Button variant="destructive" onClick={stopScan}>
                             <VideoOff className="mr-2" /> Stop Scan
                         </Button>
@@ -264,7 +274,7 @@ export default function ScannerView() {
             </TabsContent>
         </Tabs>
 
-        {(scanResult || error && mode !== 'camera') && (
+        {(scanResult || (error && mode !== 'camera' && !isLoading)) && (
             <Card className="mt-8">
                 <CardHeader>
                     <CardTitle>{scanResult ? 'Scan Result' : 'Error'}</CardTitle>
@@ -302,5 +312,3 @@ export default function ScannerView() {
     </Card>
   );
 }
-
-    
