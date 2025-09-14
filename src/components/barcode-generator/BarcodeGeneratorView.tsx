@@ -62,12 +62,12 @@ const defaultOptions: ToCanvasOptions = {
 
 export default function BarcodeGeneratorView() {
     const { toast } = useToast();
-    const canvasRef = useRef<HTMLCanvasElement>(null);
     
     const [options, setOptions] = useState<ToCanvasOptions>(defaultOptions);
     const [error, setError] = useState<string | null>(null);
     const [hasGenerated, setHasGenerated] = useState(false);
     const [downloadFormat, setDownloadFormat] = useState<DownloadFormat>('png');
+    const [bulkDownloadFormat, setBulkDownloadFormat] = useState<DownloadFormat>('png');
     const [isLoading, setIsLoading] = useState(false);
     
     const [mode, setMode] = useState<'single' | 'bulk'>('single');
@@ -110,7 +110,7 @@ export default function BarcodeGeneratorView() {
                     filename = item.substring(0, 50).replace(/[^a-z0-9]/gi, '_').toLowerCase();
                 }
 
-                return { id: `barcode-${index}-${Date.now()}`, data: dataString, url, filename: `${filename}.png` };
+                return { id: `barcode-${index}-${Date.now()}`, data: dataString, url, filename: `${filename}` };
             });
 
             const generatedCodes = await Promise.all(generationPromises);
@@ -180,7 +180,6 @@ export default function BarcodeGeneratorView() {
         }
 
         const barcode = bulkBarcodes[0];
-        const canvas = document.createElement('canvas');
         
         const generationOptions: ToCanvasOptions = {
             ...options,
@@ -194,6 +193,7 @@ export default function BarcodeGeneratorView() {
 
         if (format === 'png') {
             try {
+                const canvas = document.createElement('canvas');
                 bwipjs.toCanvas(canvas, generationOptions);
                 const a = document.createElement('a');
                 a.href = canvas.toDataURL('image/png');
@@ -228,21 +228,28 @@ export default function BarcodeGeneratorView() {
         const zip = new JSZip();
         
         const filePromises = bulkBarcodes.map(async (barcode) => {
-            const generationOptions: ToCanvasOptions = {
+            const generationOptions: ToCanvasOptions & ToSvgOptions = {
                 ...options,
                 text: barcode.data,
                 scale: 5, // Higher scale for better quality download
             };
-             if (twoDBarcodeTypes.includes(generationOptions.bcid)) {
+            if (twoDBarcodeTypes.includes(generationOptions.bcid)) {
                 // @ts-ignore
                 delete generationOptions.height;
             }
 
-            const tempCanvas = document.createElement('canvas');
-            bwipjs.toCanvas(tempCanvas, generationOptions);
-            const blob: Blob | null = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
-            if(blob) {
-                zip.file(barcode.filename, blob);
+            const filename = `${barcode.filename}.${bulkDownloadFormat}`;
+
+            if (bulkDownloadFormat === 'png') {
+                const tempCanvas = document.createElement('canvas');
+                bwipjs.toCanvas(tempCanvas, generationOptions);
+                const blob: Blob | null = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+                if (blob) {
+                    zip.file(filename, blob);
+                }
+            } else { // svg
+                const svgString = bwipjs.toSVG(generationOptions);
+                zip.file(filename, svgString);
             }
         });
 
@@ -480,9 +487,20 @@ export default function BarcodeGeneratorView() {
                         {hasGenerated && !error && bulkBarcodes.length > 0 && (
                              <div className="flex flex-col items-center gap-6 w-full">
                                 {mode === 'bulk' && bulkBarcodes.length > 1 && (
-                                    <Button onClick={downloadAllAsZip} variant="default" size="lg">
-                                        <PackageCheck className="mr-2 h-5 w-5" /> Download All as .zip
-                                    </Button>
+                                     <div className="flex flex-wrap items-center justify-center gap-4">
+                                        <Select value={bulkDownloadFormat} onValueChange={(v: DownloadFormat) => setBulkDownloadFormat(v)}>
+                                            <SelectTrigger className="w-[120px]">
+                                                <SelectValue placeholder="Select format" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="png">PNG</SelectItem>
+                                                <SelectItem value="svg">SVG</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <Button onClick={downloadAllAsZip} variant="default" size="lg">
+                                            <PackageCheck className="mr-2 h-5 w-5" /> Download All as .zip
+                                        </Button>
+                                    </div>
                                 )}
                                 {mode === 'single' && (
                                      <div className="flex flex-wrap gap-4 justify-center pt-4 border-t border-border w-full">
@@ -524,5 +542,3 @@ export default function BarcodeGeneratorView() {
         </div>
     );
 }
-
-    
