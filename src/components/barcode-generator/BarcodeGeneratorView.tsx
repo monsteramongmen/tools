@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Share2, Palette, Text, Minimize, Settings, AlertCircle, Wand2 } from 'lucide-react';
+import { Download, Share2, Palette, Text, Minimize, Settings, AlertCircle, Wand2, RefreshCw } from 'lucide-react';
 
 const supportedBarcodeTypes = [
     'code128', 'ean13', 'ean8', 'upca', 'upce', 'isbn', 'gs1-128', 'qrcode',
@@ -22,28 +22,30 @@ const fontOptions = ['Helvetica', 'Arial', 'Courier', 'Times'];
 
 type DownloadFormat = 'png' | 'svg';
 
+const defaultOptions: ToCanvasOptions = {
+    bcid: 'code128',
+    text: '1234567890',
+    scale: 3,
+    scaleX: undefined,
+    scaleY: undefined,
+    height: 10,
+    includetext: true,
+    textxalign: 'center',
+    barcolor: '000000',
+    backgroundcolor: 'FFFFFF',
+    padding: 10,
+    textsize: 12,
+    textfont: 'Helvetica',
+    textyalign: 'below',
+    rotate: 'N',
+    addon: '',
+};
+
 export default function BarcodeGeneratorView() {
     const { toast } = useToast();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     
-    const [options, setOptions] = useState<ToCanvasOptions>({
-        bcid: 'code128',
-        text: '1234567890',
-        scale: 3,
-        scaleX: undefined,
-        scaleY: undefined,
-        height: 10,
-        includetext: true,
-        textxalign: 'center',
-        barcolor: '000000',
-        backgroundcolor: 'FFFFFF',
-        padding: 10,
-        textsize: 12,
-        textfont: 'Helvetica',
-        textyalign: 'below',
-        rotate: 'N',
-        addon: '',
-    });
+    const [options, setOptions] = useState<ToCanvasOptions>(defaultOptions);
     
     const [error, setError] = useState<string | null>(null);
     const [hasGenerated, setHasGenerated] = useState(false);
@@ -63,6 +65,8 @@ export default function BarcodeGeneratorView() {
                     // Clear the canvas
                     const ctx = canvas.getContext('2d');
                     ctx?.clearRect(0, 0, canvas.width, canvas.height);
+                    canvas.width = 0; // Collapse canvas
+                    canvas.height = 0;
                     setHasGenerated(false);
                     return;
                 }
@@ -78,6 +82,19 @@ export default function BarcodeGeneratorView() {
             }
         }
     };
+    
+    const handleReset = () => {
+        const canvas = canvasRef.current;
+        setOptions(defaultOptions);
+        setError(null);
+        setHasGenerated(false);
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx?.clearRect(0, 0, canvas.width, canvas.height);
+            canvas.width = 0;
+            canvas.height = 0;
+        }
+    }
 
     const downloadBarcode = () => {
         if (!hasGenerated || error) {
@@ -270,9 +287,14 @@ export default function BarcodeGeneratorView() {
                         </AccordionItem>
                     </Accordion>
 
-                     <Button onClick={handleGenerate} className="w-full mt-4">
-                        <Wand2 className="mr-2" /> Generate Barcode
-                    </Button>
+                    <div className="flex gap-2 w-full mt-4">
+                         <Button onClick={handleGenerate} className="flex-1">
+                            <Wand2 className="mr-2" /> Generate
+                        </Button>
+                         <Button onClick={handleReset} variant="outline">
+                            <RefreshCw className="mr-2" /> Reset
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -281,8 +303,10 @@ export default function BarcodeGeneratorView() {
                     <CardHeader>
                         <CardTitle>Barcode Preview</CardTitle>
                     </CardHeader>
-                    <CardContent className="flex flex-col items-center justify-center min-h-[250px] bg-muted rounded-lg p-4">
-                        <canvas ref={canvasRef} className="max-w-full h-auto" />
+                    <CardContent className="flex flex-col items-center justify-center min-h-[250px] bg-muted rounded-lg p-4 overflow-auto">
+                        <div className="flex items-center justify-center p-4">
+                            <canvas ref={canvasRef} />
+                        </div>
                          {error && (
                             <div className="text-destructive text-center p-4 rounded-md bg-destructive/10 flex flex-col items-center gap-2">
                                 <AlertCircle className="w-8 h-8" />
@@ -297,7 +321,7 @@ export default function BarcodeGeneratorView() {
                         )}
                         
                         {hasGenerated && !error && (
-                             <div className="flex flex-wrap gap-4 justify-center mt-6">
+                             <div className="flex flex-wrap gap-4 justify-center mt-6 pt-6 border-t border-border w-full">
                                 <div className="flex items-center gap-2">
                                     <Select value={downloadFormat} onValueChange={(v: DownloadFormat) => setDownloadFormat(v)}>
                                         <SelectTrigger className="w-[100px]">
